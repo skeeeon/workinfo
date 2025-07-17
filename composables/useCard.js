@@ -37,51 +37,35 @@ export const useCard = () => {
   }
   
   /**
-   * Get card by username - Fixed version
-   * @param {string} username - Username to lookup
-   * @returns {Promise<Object|null>} Card data
-   */
-  const getCardByUsername = async (username) => {
-    if (!pb) return null
-    
-    try {
-      console.log('Fetching card for username:', username)
-      
-      // Get user by username
-      const userRecords = await pb.collection('users').getList(1, 1, {
-        filter: `username = "${username}"`
-      })
-      
-      console.log('User records found:', userRecords.items.length)
-      
-      if (userRecords.items.length === 0) {
-        console.log('No user found with username:', username)
-        return null
-      }
-      
-      const targetUser = userRecords.items[0]
-      console.log('Target user:', targetUser.id)
-      
-      // Get their card
-      const cardRecords = await pb.collection('cards').getList(1, 1, {
-        filter: `user_id = "${targetUser.id}" && is_active = true`,
-        expand: 'user_id'
-      })
-      
-      console.log('Card records found:', cardRecords.items.length)
-      
-      if (cardRecords.items.length === 0) {
-        console.log('No active card found for user:', targetUser.id)
-        return null
-      }
-      
-      return cardRecords.items[0]
-    } catch (err) {
-      console.error('Error fetching card by username:', err)
-      return null
+ * Get card by username - Clean and efficient implementation
+ * @param {string} username - Username to lookup
+ * @returns {Promise<Object|null>} Card data
+ */
+const getCardByUsername = async (username) => {
+  if (!pb) return null;
+
+  try {
+    console.log('Fetching card for username:', username);
+
+    // Directly filter the 'cards' collection by the username of the expanded 'user_id'
+    const records = await pb.collection('cards').getList(1, 1, {
+      filter: `user_id.username = "${username}" && is_active = true`,
+      expand: 'user_id',
+    });
+
+    if (records.items.length === 0) {
+      console.log('No active card found for username:', username);
+      return null;
     }
+
+    // Return the first matching card
+    return records.items[0];
+  } catch (err) {
+    console.error('Error fetching card by username:', err);
+    return null;
   }
-  
+};
+
   /**
    * Save card (create or update)
    * @param {Object} cardData - Card data to save
@@ -186,37 +170,32 @@ export const useCard = () => {
     }
   }
   
-  /**
+   /**
    * Generate profile image URL - FIXED VERSION
    * @param {Object} cardData - Card data
    * @returns {string} Image URL
    */
   const getProfileImageUrl = (cardData) => {
-    if (!cardData?.profile_image) {
-      console.log('No profile image in card data')
-      return ''
+    if (!cardData?.profile_image || !cardData.id) {
+      // Return empty string if there's no image or card ID
+      return '';
     }
-    
-    if (!cardData.id) {
-      console.log('No card ID for image URL generation')
-      return ''
-    }
-    
+
     try {
-      const config = useRuntimeConfig()
-      const baseUrl = config.public.pocketbaseUrl
-      
-      // Construct proper PocketBase file URL
-      const imageUrl = `${baseUrl}/api/files/cards/${cardData.id}/${cardData.profile_image}`
-      
-      console.log('Generated image URL:', imageUrl)
-      return imageUrl
+      const config = useRuntimeConfig();
+      // Correctly use the pocketbaseUrl defined in nuxt.config.ts
+      const baseUrl = config.public.pocketbaseUrl;
+
+      // Construct the full, valid URL for the Pocketbase file
+      const imageUrl = `${baseUrl}/api/files/cards/${cardData.id}/${cardData.profile_image}`;
+    
+      return imageUrl;
     } catch (err) {
-      console.error('Error generating image URL:', err)
-      return ''
+      console.error('Error generating image URL:', err);
+      return '';
     }
-  }
-  
+  };
+
   /**
    * Generate vCard content
    * @param {Object} cardData - Card data

@@ -121,7 +121,7 @@ definePageMeta({
 })
 
 // Use auth composable
-const { registerUser, isLoading, error, clearError, validateUsername, validateEmail } = useAuth()
+const { registerUser, isLoading, error, clearError, isValidUsername, isValidEmail } = useAuth()
 
 // Form data
 const formData = ref({
@@ -158,7 +158,7 @@ const validateUsernameFormat = () => {
   if (!formData.value.username) return
   
   // Validate username format
-  if (!validateUsername(formData.value.username)) {
+  if (!isValidUsername(formData.value.username)) {
     usernameError.value = 'Username must be 3-20 characters, letters, numbers, and underscores only'
     return
   }
@@ -171,7 +171,7 @@ const handleRegister = async () => {
   clearError()
   
   // Final validation
-  if (!validateEmail(formData.value.email)) {
+  if (!isValidEmail(formData.value.email)) {
     error.value = 'Please enter a valid email address'
     return
   }
