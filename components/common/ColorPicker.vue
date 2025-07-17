@@ -25,15 +25,21 @@
 
     <!-- Color value display -->
     <div v-if="showValue" class="color-value">
-      <input
-        v-model="hexValue"
-        @input="handleHexInput"
-        @blur="validateHex"
-        class="hex-input"
-        placeholder="#000000"
-        maxlength="7"
-        :disabled="disabled"
-      />
+      <div class="color-info">
+        <p class="color-label" 
+           :style="{ color: 'var(--color-content-primary)' }">
+          {{ label || 'Color' }}
+        </p>
+        <input
+          v-model="hexValue"
+          @input="handleHexInput"
+          @blur="validateHex"
+          class="hex-input"
+          placeholder="#000000"
+          maxlength="7"
+          :disabled="disabled"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -167,8 +173,9 @@ const getContrastColor = (backgroundColor) => {
 <style scoped>
 .color-picker {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 1rem;
+  width: 100%;
 }
 
 .color-display {
@@ -183,6 +190,7 @@ const getContrastColor = (backgroundColor) => {
   justify-content: center;
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .color-display:hover {
@@ -212,13 +220,27 @@ const getContrastColor = (backgroundColor) => {
 }
 
 .color-value {
+  flex: 1;
+  min-width: 0;
+}
+
+.color-info {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  width: 100%;
+}
+
+.color-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .hex-input {
-  width: 80px;
+  width: 100%;
+  max-width: 120px;
   padding: 0.375rem 0.5rem;
   border: 1px solid var(--color-border-primary);
   border-radius: 0.25rem;
@@ -261,5 +283,22 @@ const getContrastColor = (backgroundColor) => {
   bottom: 0;
   background: linear-gradient(45deg, transparent 40%, rgba(255, 255, 255, 0.1) 50%, transparent 60%);
   pointer-events: none;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .color-picker {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .color-info {
+    width: 100%;
+  }
+  
+  .hex-input {
+    max-width: 100%;
+  }
 }
 </style>

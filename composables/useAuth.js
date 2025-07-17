@@ -68,12 +68,12 @@ export const useAuth = () => {
         throw new Error('Password must be at least 8 characters long')
       }
       
-      // Check if username is available
-      const existingUser = await checkUsernameAvailability(userData.username)
-      if (!existingUser) {
-        throw new Error('Username is already taken')
+      // Validate username format
+      if (!validateUsername(userData.username)) {
+        throw new Error('Username must be 3-20 characters, letters, numbers, and underscores only')
       }
       
+      // Try to register - Pocketbase will handle username uniqueness validation
       await register(userData)
       
       // Redirect to dashboard after successful registration
@@ -81,7 +81,14 @@ export const useAuth = () => {
       return true
       
     } catch (err) {
-      error.value = err.message
+      // Handle specific Pocketbase errors
+      if (err.message.includes('username')) {
+        error.value = 'Username is already taken. Please choose a different one.'
+      } else if (err.message.includes('email')) {
+        error.value = 'Email is already registered. Please use a different email or try logging in.'
+      } else {
+        error.value = err.message
+      }
       return false
     } finally {
       isLoading.value = false
@@ -89,20 +96,16 @@ export const useAuth = () => {
   }
   
   /**
-   * Check if username is available
+   * Check if username is available (simplified version)
+   * This now only validates format, not availability
+   * Actual availability is checked server-side during registration
    * @param {string} username - Username to check
-   * @returns {Promise<boolean>} True if available
+   * @returns {Promise<boolean>} True if format is valid
    */
   const checkUsernameAvailability = async (username) => {
-    try {
-      const records = await pb.collection('users').getList(1, 1, {
-        filter: `username = "${username}"`
-      })
-      return records.items.length === 0
-    } catch (error) {
-      console.error('Username check failed:', error)
-      return false
-    }
+    // Only validate format client-side
+    // Actual availability will be checked during registration
+    return validateUsername(username)
   }
   
   /**

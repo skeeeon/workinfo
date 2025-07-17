@@ -210,6 +210,11 @@
         {{ isLoading ? 'Saving...' : 'Save Card' }}
       </button>
     </div>
+
+    <!-- Auto-save indicator -->
+    <div v-if="autoSaving" class="fixed bottom-4 left-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
+      Auto-saving...
+    </div>
   </div>
 </template>
 
@@ -250,6 +255,9 @@ const formData = ref({
   website: '',
   calendar: ''
 })
+
+// Auto-save state
+const autoSaving = ref(false)
 
 // Validation state
 const validationErrors = ref([])
@@ -307,16 +315,24 @@ const handleImageUpload = (file) => {
   emit('image-upload', file)
 }
 
-// Auto-save on form changes (debounced)
+// Auto-save on form changes (debounced with longer delay)
 let saveTimeout = null
 watch(formData, () => {
   if (!isFormValid.value) return
   
   clearTimeout(saveTimeout)
+  autoSaving.value = true
+  
   saveTimeout = setTimeout(() => {
     handleSave()
-  }, 2000) // Auto-save after 2 seconds of no changes
+    autoSaving.value = false
+  }, 8000) // Increased from 2 seconds to 8 seconds
 }, { deep: true })
+
+// Clear auto-saving indicator when component unmounts
+onUnmounted(() => {
+  clearTimeout(saveTimeout)
+})
 </script>
 
 <style scoped>

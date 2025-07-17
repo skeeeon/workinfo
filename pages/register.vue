@@ -17,16 +17,13 @@
           placeholder="Choose a unique username"
           required
           :disabled="isLoading"
-          @input="checkUsernameDebounced"
+          @input="validateUsernameFormat"
         />
         <div v-if="usernameError" class="form-error">
           {{ usernameError }}
         </div>
-        <div v-else-if="usernameChecking" class="form-helper">
-          Checking availability...
-        </div>
-        <div v-else-if="usernameAvailable && formData.username" class="text-green-600 text-sm mt-1">
-          ✓ Username available
+        <div v-else-if="usernameValid && formData.username" class="text-green-600 text-sm mt-1">
+          ✓ Username format is valid
         </div>
         <p class="form-helper">
           Your username will be used in your card URL: hivecard.me/users/{{ formData.username || 'username' }}
@@ -113,7 +110,8 @@
 <script setup>
 /**
  * Registration page for Hivecard
- * Handles user registration with username availability checking
+ * Handles user registration with client-side format validation
+ * Username availability is checked server-side during registration
  */
 
 // Define layout
@@ -123,7 +121,7 @@ definePageMeta({
 })
 
 // Use auth composable
-const { registerUser, isLoading, error, clearError, checkUsernameAvailability, validateUsername, validateEmail } = useAuth()
+const { registerUser, isLoading, error, clearError, validateUsername, validateEmail } = useAuth()
 
 // Form data
 const formData = ref({
@@ -133,10 +131,9 @@ const formData = ref({
   passwordConfirm: ''
 })
 
-// Username checking state
-const usernameChecking = ref(false)
-const usernameAvailable = ref(false)
+// Username validation state
 const usernameError = ref('')
+const usernameValid = ref(false)
 
 // Computed properties
 const passwordMismatch = computed(() => {
@@ -150,38 +147,23 @@ const isFormValid = computed(() => {
          formData.value.passwordConfirm &&
          !passwordMismatch.value &&
          !usernameError.value &&
-         usernameAvailable.value
+         usernameValid.value
 })
 
-// Username availability checking with debounce
-let usernameTimeout = null
-const checkUsernameDebounced = () => {
-  clearTimeout(usernameTimeout)
+// Username format validation
+const validateUsernameFormat = () => {
   usernameError.value = ''
-  usernameAvailable.value = false
+  usernameValid.value = false
   
   if (!formData.value.username) return
   
-  // Validate username format first
+  // Validate username format
   if (!validateUsername(formData.value.username)) {
     usernameError.value = 'Username must be 3-20 characters, letters, numbers, and underscores only'
     return
   }
   
-  usernameTimeout = setTimeout(async () => {
-    usernameChecking.value = true
-    try {
-      const available = await checkUsernameAvailability(formData.value.username)
-      usernameAvailable.value = available
-      if (!available) {
-        usernameError.value = 'Username is already taken'
-      }
-    } catch (err) {
-      usernameError.value = 'Error checking username availability'
-    } finally {
-      usernameChecking.value = false
-    }
-  }, 500)
+  usernameValid.value = true
 }
 
 // Handle form submission

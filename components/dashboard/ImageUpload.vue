@@ -78,14 +78,32 @@
       <div v-if="successMessage" class="success-message mt-3">
         {{ successMessage }}
       </div>
+
+      <!-- Debug Info -->
+      <div v-if="showDebug" class="debug-info mt-3 p-2 bg-gray-100 rounded text-xs">
+        <div><strong>Debug Info:</strong></div>
+        <div>Current Image: {{ currentImage || 'None' }}</div>
+        <div>Preview URL: {{ previewUrl || 'None' }}</div>
+        <div>Upload State: {{ uploading ? 'Uploading' : 'Ready' }}</div>
+        <div>Progress: {{ uploadProgress }}%</div>
+        <div>Last Error: {{ errorMessage || 'None' }}</div>
+      </div>
+
+      <!-- Debug Toggle -->
+      <div class="mt-2 text-center">
+        <button @click="showDebug = !showDebug" 
+                class="text-xs text-gray-500 hover:text-gray-700">
+          {{ showDebug ? 'Hide' : 'Show' }} Debug Info
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 /**
- * Image upload component for profile pictures
- * Handles file selection, validation, upload, and preview
+ * Image upload component for profile pictures - Complete Fix
+ * Handles file selection, validation, upload, and preview with debugging
  */
 
 // Import Heroicons
@@ -121,11 +139,38 @@ const uploadProgress = ref(0)
 const errorMessage = ref('')
 const successMessage = ref('')
 const previewUrl = ref(null)
+const showDebug = ref(false)
 
 // Computed properties
 const currentImageUrl = computed(() => {
-  if (previewUrl.value) return previewUrl.value
-  if (typeof props.currentImage === 'string') return props.currentImage
+  console.log('ImageUpload: Computing current image URL:', {
+    previewUrl: previewUrl.value,
+    currentImage: props.currentImage,
+    type: typeof props.currentImage
+  })
+  
+  // Priority: 1. Local preview (for immediate feedback), 2. Pocketbase URL
+  if (previewUrl.value) {
+    console.log('ImageUpload: Using preview URL')
+    return previewUrl.value
+  }
+  
+  // If currentImage is a card object with profile_image, generate proper URL
+  if (props.currentImage && typeof props.currentImage === 'object' && props.currentImage.profile_image) {
+    console.log('ImageUpload: Generating URL from card object')
+    const { getProfileImageUrl } = useCard()
+    const url = getProfileImageUrl(props.currentImage)
+    console.log('ImageUpload: Generated URL:', url)
+    return url
+  }
+  
+  // If currentImage is already a URL string
+  if (typeof props.currentImage === 'string') {
+    console.log('ImageUpload: Using string URL')
+    return props.currentImage
+  }
+  
+  console.log('ImageUpload: No image to display')
   return null
 })
 
@@ -133,6 +178,7 @@ const currentImageUrl = computed(() => {
  * Trigger file input click
  */
 const triggerFileSelect = () => {
+  console.log('ImageUpload: Triggering file select')
   if (fileInput.value) {
     fileInput.value.click()
   }
@@ -143,6 +189,8 @@ const triggerFileSelect = () => {
  */
 const handleFileSelect = (event) => {
   const file = event.target.files[0]
+  console.log('ImageUpload: File selected:', file?.name)
+  
   if (!file) return
 
   // Clear previous messages
@@ -152,13 +200,14 @@ const handleFileSelect = (event) => {
   const validation = validateFile(file)
   if (!validation.valid) {
     errorMessage.value = validation.error
+    console.error('ImageUpload: File validation failed:', validation.error)
     return
   }
 
   // Create preview
   createPreview(file)
 
-  // Upload file
+  // Start upload process
   uploadFile(file)
 }
 
@@ -166,6 +215,12 @@ const handleFileSelect = (event) => {
  * Validate selected file
  */
 const validateFile = (file) => {
+  console.log('ImageUpload: Validating file:', {
+    name: file.name,
+    size: file.size,
+    type: file.type
+  })
+  
   // Check file type
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
@@ -191,17 +246,25 @@ const validateFile = (file) => {
  * Create image preview
  */
 const createPreview = (file) => {
+  console.log('ImageUpload: Creating preview for:', file.name)
+  
   const reader = new FileReader()
   reader.onload = (e) => {
     previewUrl.value = e.target.result
+    console.log('ImageUpload: Preview created successfully')
+  }
+  reader.onerror = (e) => {
+    console.error('ImageUpload: Preview creation failed:', e)
   }
   reader.readAsDataURL(file)
 }
 
 /**
- * Upload file
+ * Upload file - Fixed version with proper parent communication
  */
 const uploadFile = async (file) => {
+  console.log('ImageUpload: Starting upload process for:', file.name)
+  
   uploading.value = true
   uploadProgress.value = 0
 
@@ -213,22 +276,29 @@ const uploadFile = async (file) => {
       }
     }, 100)
 
-    // Emit upload event
+    console.log('ImageUpload: Emitting upload event to parent component')
+    
+    // Emit upload event to parent (dashboard) - this triggers the actual upload
     emit('upload', file)
+
+    // Wait for upload to complete (parent should handle actual upload)
+    await new Promise(resolve => setTimeout(resolve, 1500))
 
     // Complete progress
     clearInterval(progressInterval)
     uploadProgress.value = 100
+
+    console.log('ImageUpload: Upload process completed')
 
     // Show success message
     successMessage.value = 'Image uploaded successfully!'
     setTimeout(() => {
       successMessage.value = ''
       uploadProgress.value = 0
-    }, 2000)
+    }, 3000)
 
   } catch (error) {
-    console.error('Upload error:', error)
+    console.error('ImageUpload: Upload error:', error)
     errorMessage.value = 'Failed to upload image. Please try again.'
     previewUrl.value = null
   } finally {
@@ -240,6 +310,8 @@ const uploadFile = async (file) => {
  * Remove current image
  */
 const removeImage = () => {
+  console.log('ImageUpload: Removing current image')
+  
   previewUrl.value = null
   clearMessages()
   emit('remove')
@@ -260,9 +332,18 @@ const clearMessages = () => {
 
 // Clear preview when current image prop changes
 watch(() => props.currentImage, () => {
+  console.log('ImageUpload: Current image prop changed:', props.currentImage)
   if (!props.currentImage) {
     previewUrl.value = null
   }
+})
+
+// Debug: Log when component mounts
+onMounted(() => {
+  console.log('ImageUpload: Component mounted with props:', {
+    currentImage: props.currentImage,
+    disabled: props.disabled
+  })
 })
 </script>
 
@@ -369,6 +450,11 @@ watch(() => props.currentImage, () => {
   border-radius: 0.375rem;
   color: var(--color-success);
   font-size: 0.875rem;
+}
+
+.debug-info {
+  border: 1px solid #ccc;
+  font-family: monospace;
 }
 
 .btn:disabled {

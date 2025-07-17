@@ -3,7 +3,7 @@
   <div 
     v-if="show" 
     class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-    @click="$emit('close')"
+    @click="handleBackdropClick"
   >
     <!-- Modal content -->
     <div 
@@ -13,8 +13,8 @@
     >
       <!-- Close button -->
       <button 
-        @click="$emit('close')"
-        class="absolute top-4 right-4 p-2 rounded-full transition-colors"
+        @click="handleCloseClick"
+        class="absolute top-4 right-4 p-2 rounded-full transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
         :style="{ 
           backgroundColor: 'var(--color-surface-secondary)',
           color: 'var(--color-content-primary)'
@@ -36,6 +36,14 @@
         </p>
       </div>
 
+      <!-- Debug info -->
+      <div v-if="debugMode" class="mb-4 p-2 bg-gray-100 rounded text-xs">
+        <p>Card URL: {{ cardUrl }}</p>
+        <p>QR URL: {{ qrUrl }}</p>
+        <p>Generating: {{ generating }}</p>
+        <p>Error: {{ error }}</p>
+      </div>
+
       <!-- QR Code container -->
       <div class="qr-container text-center mb-6">
         <div 
@@ -52,6 +60,7 @@
           <div v-else-if="error" class="flex items-center justify-center flex-col" style="width: 200px; height: 200px;">
             <ExclamationTriangleIcon class="w-12 h-12 text-red-500 mb-2" />
             <p class="text-sm text-red-600">Failed to generate QR code</p>
+            <button @click="retryGeneration" class="text-xs text-blue-500 mt-1">Retry</button>
           </div>
         </div>
       </div>
@@ -73,6 +82,13 @@
           Share
         </button>
       </div>
+
+      <!-- Toggle debug mode -->
+      <div class="mt-4 text-center">
+        <button @click="debugMode = !debugMode" class="text-xs text-gray-500">
+          {{ debugMode ? 'Hide' : 'Show' }} Debug Info
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -80,7 +96,7 @@
 <script setup>
 /**
  * QR Code modal component for sharing business cards
- * Generates QR codes using a simple QR generation approach
+ * Generates QR codes using QR Server API with debugging
  */
 
 // Import Heroicons
@@ -116,45 +132,78 @@ const qrCodeContainer = ref(null)
 // State
 const generating = ref(false)
 const error = ref(false)
+const debugMode = ref(false)
 
 // Computed properties
 const canShare = computed(() => {
   return import.meta.client && 'share' in navigator
 })
 
+const qrUrl = computed(() => {
+  if (!props.cardUrl) return ''
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(props.cardUrl)}`
+})
+
 /**
- * Generate QR code using QR Server API (free service)
+ * Handle backdrop click to close modal
+ */
+const handleBackdropClick = (event) => {
+  // Only close if clicking the backdrop, not the modal content
+  if (event.target === event.currentTarget) {
+    console.log('QR Modal: Backdrop clicked, closing modal')
+    emit('close')
+  }
+}
+
+/**
+ * Handle close button click
+ */
+const handleCloseClick = () => {
+  console.log('QR Modal: Close button clicked')
+  emit('close')
+}
+
+/**
+ * Generate QR code using QR Server API
  */
 const generateQRCode = async () => {
-  if (!qrCodeContainer.value || !props.cardUrl) return
+  if (!qrCodeContainer.value || !props.cardUrl) {
+    console.log('Missing container or card URL')
+    return
+  }
   
   generating.value = true
   error.value = false
   
   try {
+    console.log('Generating QR code for:', props.cardUrl)
+    
     // Clear existing content
     qrCodeContainer.value.innerHTML = ''
     
-    // Create QR code image using QR Server API (free service)
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(props.cardUrl)}`
+    // Create QR code image using QR Server API
+    const qrImageUrl = qrUrl.value
+    console.log('QR image URL:', qrImageUrl)
     
     // Create image element
     const img = document.createElement('img')
-    img.src = qrUrl
+    img.src = qrImageUrl
     img.alt = 'QR Code for business card'
     img.style.width = '200px'
     img.style.height = '200px'
     img.style.display = 'block'
+    img.crossOrigin = 'anonymous' // Add this for CORS
     
     // Handle image load/error
     img.onload = () => {
+      console.log('QR code loaded successfully')
       generating.value = false
     }
     
-    img.onerror = () => {
+    img.onerror = (err) => {
+      console.error('QR code failed to load:', err)
       generating.value = false
       error.value = true
-      console.error('Failed to generate QR code')
     }
     
     // Append to container
@@ -165,6 +214,16 @@ const generateQRCode = async () => {
     generating.value = false
     error.value = true
   }
+}
+
+/**
+ * Retry QR code generation
+ */
+const retryGeneration = () => {
+  error.value = false
+  nextTick(() => {
+    generateQRCode()
+  })
 }
 
 /**
@@ -205,7 +264,18 @@ const shareCard = async () => {
 // Watch for show prop changes to generate QR code
 watch(() => props.show, (newShow) => {
   if (newShow) {
+    console.log('Modal opened, generating QR code...')
     // Wait for DOM update
+    nextTick(() => {
+      generateQRCode()
+    })
+  }
+})
+
+// Watch for card URL changes
+watch(() => props.cardUrl, (newUrl) => {
+  if (props.show && newUrl) {
+    console.log('Card URL changed, regenerating QR code...')
     nextTick(() => {
       generateQRCode()
     })

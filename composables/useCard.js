@@ -1,14 +1,18 @@
 /**
- * Card management composable
- * Handles business card CRUD operations and utilities
+ * Card management composable - Image URL Fix
+ * Handles business card CRUD operations and utilities with proper image URL handling
  */
 
 export const useCard = () => {
-  const { pb, user } = usePocketbase()
-  
   // Loading and error states
   const isLoading = ref(false)
   const error = ref(null)
+  
+  // Get Pocketbase and user reactively (safely)
+  const getPocketbaseContext = () => {
+    const { pb, user } = usePocketbase()
+    return { pb, user }
+  }
   
   /**
    * Get user's card
@@ -17,6 +21,9 @@ export const useCard = () => {
    */
   const getUserCard = async (userId = null) => {
     try {
+      const { pb, user } = getPocketbaseContext()
+      if (!pb) throw new Error('Pocketbase not available')
+      
       const targetUserId = userId || user.value?.id
       if (!targetUserId) return null
       
@@ -39,6 +46,9 @@ export const useCard = () => {
    */
   const getCardByUsername = async (username) => {
     try {
+      const { pb } = getPocketbaseContext()
+      if (!pb) throw new Error('Pocketbase not available')
+      
       // First get the user by username
       const userRecords = await pb.collection('users').getList(1, 1, {
         filter: `username = "${username}"`
@@ -71,9 +81,9 @@ export const useCard = () => {
     error.value = null
     
     try {
-      if (!user.value) {
-        throw new Error('User not authenticated')
-      }
+      const { pb, user } = getPocketbaseContext()
+      if (!pb) throw new Error('Pocketbase not available')
+      if (!user.value) throw new Error('User not authenticated')
       
       // Get existing card
       const existingCard = await getUserCard()
@@ -106,18 +116,42 @@ export const useCard = () => {
   }
   
   /**
-   * Upload profile image
+   * Upload profile image - FIXED VERSION
    * @param {File} file - Image file
-   * @returns {Promise<string|null>} File URL or null
+   * @returns {Promise<Object|null>} Updated card record or null
    */
   const uploadProfileImage = async (file) => {
-    if (!user.value) return null
+    console.log('=== STARTING IMAGE UPLOAD ===')
     
     try {
+      const { pb, user } = getPocketbaseContext()
+      
+      console.log('Upload context check:', {
+        hasPb: !!pb,
+        hasUser: !!user.value,
+        userId: user.value?.id,
+        username: user.value?.username
+      })
+      
+      if (!pb) {
+        throw new Error('Pocketbase client not available')
+      }
+      
+      if (!user.value) {
+        throw new Error('No authenticated user for image upload')
+      }
+      
+      console.log('File upload details:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      })
+      
       // Get or create card first
       let card = await getUserCard()
       
       if (!card) {
+        console.log('No existing card, creating new one...')
         // Create minimal card if doesn't exist
         card = await pb.collection('cards').create({
           user_id: user.value.id,
@@ -126,19 +160,36 @@ export const useCard = () => {
           company: '',
           is_active: true
         })
+        console.log('Created new card:', card.id)
       }
       
-      // Update with image
+      console.log('Uploading to card:', card.id)
+      
+      // Create FormData for multipart/form-data upload
       const formData = new FormData()
       formData.append('profile_image', file)
       
+      console.log('FormData created, uploading...')
+      
+      // Update card with image using Pocketbase SDK
       const result = await pb.collection('cards').update(card.id, formData)
       
-      // Return the image URL
-      return pb.files.getUrl(result, result.profile_image)
+      console.log('Upload successful! Result:', {
+        cardId: result.id,
+        profile_image: result.profile_image,
+        collectionName: result.collectionName
+      })
+      
+      // Test URL generation
+      const testUrl = getProfileImageUrl(result)
+      console.log('Generated test URL:', testUrl)
+      
+      return result
       
     } catch (err) {
-      console.error('Error uploading image:', err)
+      console.error('=== IMAGE UPLOAD FAILED ===')
+      console.error('Error details:', err)
+      console.error('Error message:', err.message)
       return null
     }
   }
@@ -149,7 +200,8 @@ export const useCard = () => {
    */
   const deleteCard = async () => {
     try {
-      if (!user.value) return false
+      const { pb, user } = getPocketbaseContext()
+      if (!pb || !user.value) return false
       
       const card = await getUserCard()
       if (!card) return false
@@ -209,13 +261,61 @@ export const useCard = () => {
   }
   
   /**
-   * Get profile image URL
+   * Get profile image URL - COMPLETELY FIXED VERSION
    * @param {Object} cardData - Card data
    * @returns {string} Image URL or empty string
    */
   const getProfileImageUrl = (cardData) => {
-    if (!cardData?.profile_image) return ''
-    return pb.files.getUrl(cardData, cardData.profile_image)
+    console.log('=== GENERATING IMAGE URL ===')
+    console.log('Input card data:', {
+      id: cardData?.id,
+      profile_image: cardData?.profile_image,
+      collectionName: cardData?.collectionName,
+      collectionId: cardData?.collectionId
+    })
+    
+    // Return empty string if no image data
+    if (!cardData?.profile_image) {
+      console.log('No profile image in card data')
+      return ''
+    }
+    
+    try {
+      const config = useRuntimeConfig()
+      const pocketbaseUrl = config.public.pocketbaseUrl
+      
+      console.log('URL generation context:', {
+        pocketbaseUrl: pocketbaseUrl,
+        cardId: cardData.id,
+        filename: cardData.profile_image
+      })
+      
+      // Determine collection name
+      let collection = 'cards' // default
+      if (cardData.collectionName) {
+        collection = cardData.collectionName
+      } else if (cardData.collectionId) {
+        collection = cardData.collectionId
+      }
+      
+      // Construct URL manually following Pocketbase schema
+      // Schema: /api/files/collectionIdOrName/recordId/filename
+      const imageUrl = `${pocketbaseUrl}/api/files/${collection}/${cardData.id}/${cardData.profile_image}`
+      
+      console.log('Generated image URL:', imageUrl)
+      
+      // Validate URL format
+      if (!imageUrl.startsWith('http')) {
+        console.error('Generated URL is not absolute:', imageUrl)
+        return ''
+      }
+      
+      return imageUrl
+      
+    } catch (err) {
+      console.error('Error generating image URL:', err)
+      return ''
+    }
   }
   
   /**

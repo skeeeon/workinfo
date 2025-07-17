@@ -71,7 +71,7 @@
                 target="_blank"
                 class="btn btn-outlined w-full"
               >
-                <ExternalLinkIcon class="w-4 h-4 mr-2" />
+                <ArrowTopRightOnSquareIcon class="w-4 h-4 mr-2" />
                 View Public Card
               </NuxtLink>
               
@@ -130,17 +130,17 @@ definePageMeta({
   middleware: 'auth'
 })
 
-// Import Heroicons
+// Import Heroicons - Fixed import name
 import { 
   UserIcon, 
-  ExternalLinkIcon, 
+  ArrowTopRightOnSquareIcon, // This was ExternalLinkIcon in v1
   QrCodeIcon, 
   ArrowDownTrayIcon 
 } from '@heroicons/vue/24/outline'
 
 // Use composables
 const { user } = useAuth()
-const { getUserCard, saveCard, generateVCardDownloadUrl, getCardShareUrl } = useCard()
+const { getUserCard, saveCard, generateVCardDownloadUrl, getCardShareUrl, getProfileImageUrl } = useCard()
 const { loadColorsFromCard, getColorsForCard } = useTheme()
 
 // State
@@ -164,6 +164,9 @@ const showQRModal = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
 
+// Store the actual card record for proper image URL generation
+const actualCardRecord = ref(null)
+
 // Computed properties
 const hasCardData = computed(() => {
   return cardData.value.first_name && cardData.value.last_name && cardData.value.company
@@ -172,11 +175,13 @@ const hasCardData = computed(() => {
 const previewCardData = computed(() => {
   return {
     ...cardData.value,
-    id: 'preview',
+    id: actualCardRecord.value?.id || 'preview',
     user_id: user.value?.id,
     expand: {
       user_id: user.value
-    }
+    },
+    // Ensure we have the proper image reference for preview
+    profile_image: actualCardRecord.value?.profile_image || cardData.value.profile_image
   }
 })
 
@@ -193,6 +198,9 @@ const loadCardData = async () => {
   try {
     const existingCard = await getUserCard()
     if (existingCard) {
+      // Store the actual card record
+      actualCardRecord.value = existingCard
+      
       // Populate form with existing data
       Object.keys(cardData.value).forEach(key => {
         if (existingCard[key] !== undefined) {
@@ -225,8 +233,9 @@ const handleSaveCard = async (formData) => {
     
     const result = await saveCard(saveData)
     if (result) {
-      // Update local data
+      // Update local data and actual card record
       Object.assign(cardData.value, formData)
+      actualCardRecord.value = result
       showSuccess('Card saved successfully!')
     } else {
       showError('Failed to save card')
@@ -245,9 +254,10 @@ const handleSaveCard = async (formData) => {
 const handleImageUpload = async (file) => {
   try {
     const { uploadProfileImage } = useCard()
-    const imageUrl = await uploadProfileImage(file)
-    if (imageUrl) {
-      cardData.value.profile_image = imageUrl
+    const result = await uploadProfileImage(file)
+    if (result) {
+      // Reload the card to get the updated image
+      await loadCardData()
       showSuccess('Image uploaded successfully!')
     } else {
       showError('Failed to upload image')

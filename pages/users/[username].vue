@@ -74,7 +74,7 @@
 
 <script setup>
 /**
- * Public business card page
+ * Public business card page - Secure version using public_profiles
  * Displays a single user's business card accessible to anyone
  */
 
@@ -89,7 +89,6 @@ import {
 } from '@heroicons/vue/24/outline'
 
 // Use composables
-const { getCardByUsername, getCardShareUrl } = useCard()
 const { loadColorsFromCard } = useTheme()
 const route = useRoute()
 
@@ -99,24 +98,82 @@ const username = route.params.username
 // Modal state
 const showQRModal = ref(false)
 
-// Fetch card data
+/**
+ * Fetch public card using the secure public_profiles collection
+ * This function works on both client and server
+ */
+const fetchPublicCard = async (username) => {
+  try {
+    console.log('Fetching public card for username:', username)
+    
+    // Create a fresh Pocketbase client for this request
+    // This ensures it works on both client and server
+    const config = useRuntimeConfig()
+    
+    // Use $fetch for SSR-compatible requests
+    const response = await $fetch(`${config.public.pocketbaseUrl}/api/collections/public_profiles/records`, {
+      query: {
+        filter: `username="${username}" && is_active=true`,
+        perPage: 1
+      }
+    })
+    
+    if (!response.items || response.items.length === 0) {
+      console.log('No public profile found for username:', username)
+      return null
+    }
+    
+    const profile = response.items[0]
+    console.log('Found public profile:', profile.id)
+    
+    // Add mock expand for compatibility with BusinessCard component
+    profile.expand = {
+      user_id: {
+        username: profile.username
+      }
+    }
+    
+    // Set the collection name for proper image URL generation
+    profile.collectionName = 'public_profiles'
+    
+    return profile
+    
+  } catch (err) {
+    console.error('Error fetching public card:', err)
+    return null
+  }
+}
+
+// Fetch card data with SSR support
 const { data: cardData, pending, error } = await useLazyAsyncData(
-  `card-${username}`,
-  () => getCardByUsername(username),
+  `public-card-${username}`,
+  () => fetchPublicCard(username),
   {
-    // SSG compatibility: return null for unknown cards to trigger 404
-    default: () => null
+    default: () => null,
+    server: true, // Enable SSR
+    transform: (data) => {
+      // Ensure we have proper data structure
+      if (data && !data.expand) {
+        data.expand = {
+          user_id: {
+            username: data.username || username
+          }
+        }
+      }
+      return data
+    }
   }
 )
 
 // Computed properties
 const cardShareUrl = computed(() => {
   if (!cardData.value) return ''
-  return getCardShareUrl(username)
+  const config = useRuntimeConfig()
+  return `${config.public.siteUrl}/users/${username}`
 })
 
 // Handle 404 for unknown cards
-if (!pending.value && !cardData.value) {
+if (!pending.value && !cardData.value && !error.value) {
   throw createError({
     statusCode: 404,
     statusMessage: 'Business card not found'
