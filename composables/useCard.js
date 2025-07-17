@@ -36,35 +36,6 @@ export const useCard = () => {
     }
   }
   
-  /**
- * Get card by username - Clean and efficient implementation
- * @param {string} username - Username to lookup
- * @returns {Promise<Object|null>} Card data
- */
-const getCardByUsername = async (username) => {
-  if (!pb) return null;
-
-  try {
-    console.log('Fetching card for username:', username);
-
-    // Directly filter the 'cards' collection by the username of the expanded 'user_id'
-    const records = await pb.collection('cards').getList(1, 1, {
-      filter: `user_id.username = "${username}" && is_active = true`,
-      expand: 'user_id',
-    });
-
-    if (records.items.length === 0) {
-      console.log('No active card found for username:', username);
-      return null;
-    }
-
-    // Return the first matching card
-    return records.items[0];
-  } catch (err) {
-    console.error('Error fetching card by username:', err);
-    return null;
-  }
-};
 
   /**
    * Save card (create or update)
@@ -309,7 +280,6 @@ const getCardByUsername = async (username) => {
     
     // Card operations
     getUserCard,
-    getCardByUsername,
     saveCard,
     deleteCard,
     uploadProfileImage,

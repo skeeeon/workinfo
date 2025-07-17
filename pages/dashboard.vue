@@ -1,12 +1,6 @@
 <template>
   <div class="dashboard">
     <div class="container">
-      <!-- Page Header -->
-      <div class="page-header">
-        <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle">Manage your digital business card</p>
-      </div>
-
       <!-- Loading State -->
       <div v-if="cardLoading" class="loading-state">
         <div class="spinner"></div>
@@ -15,8 +9,14 @@
 
       <!-- Main Content -->
       <div v-else class="dashboard-content">
-        <!-- Card Editor -->
+        <!-- Card Editor (Left Column - Scrollable) -->
         <div class="editor-column">
+          <!-- Compact Header in Editor -->
+          <div class="editor-header">
+            <h1 class="editor-title">Edit Your Card</h1>
+            <p class="editor-subtitle">Make changes and see them instantly</p>
+          </div>
+          
           <CardEditor 
             :card-data="cardData"
             :is-loading="saveLoading"
@@ -25,64 +25,50 @@
           />
         </div>
 
-        <!-- Preview and Actions -->
+        <!-- Live Preview (Right Column - Fixed on Desktop) -->
         <div class="preview-column">
-          <!-- Card Preview -->
-          <div class="preview-section">
-            <div class="section-header">
-              <h2 class="section-title">Preview</h2>
-              <p class="section-subtitle">How your card will appear to others</p>
-            </div>
-            
-            <div class="preview-container">
-              <BusinessCard 
-                v-if="hasValidData"
-                :card="previewCardData"
-                :is-preview="true"
-                @show-qr="showQRModal = true"
-              />
-              <div v-else class="preview-placeholder">
-                <UserIcon class="placeholder-icon" />
-                <p class="placeholder-text">
-                  Fill out your information to see a preview
-                </p>
+          <div class="preview-sticky-container">
+            <!-- Live Card Preview -->
+            <div class="preview-section">
+              <div class="section-header">
+                <h2 class="section-title">Live Preview</h2>
+                <p class="section-subtitle">Your card as others will see it</p>
+              </div>
+              
+              <div class="preview-container">
+                <PublicBusinessCard 
+                  v-if="hasValidData"
+                  :card="previewCardData"
+                  @show-qr="showQRModal = true"
+                />
+                <div v-else class="preview-placeholder">
+                  <UserIcon class="placeholder-icon" />
+                  <p class="placeholder-text">
+                    Fill out your information to see a preview
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Quick Actions -->
-          <div class="actions-section">
-            <div class="section-header">
-              <h3 class="section-title">Quick Actions</h3>
-            </div>
-            
-            <div class="actions-grid">
+            <!-- Additional Actions -->
+            <div class="additional-actions">
               <NuxtLink 
-                v-if="user?.username"
-                :to="`/users/${user.username}`"
+                v-if="currentUser?.username"
+                :to="`/users/${currentUser.username}`"
                 target="_blank"
-                class="action-button"
+                class="view-public-btn"
               >
-                <ArrowTopRightOnSquareIcon class="action-icon" />
-                <span>View Public Card</span>
+                <ArrowTopRightOnSquareIcon class="w-4 h-4 mr-2" />
+                View Full Public Page
               </NuxtLink>
               
               <button 
-                @click="showQRModal = true"
-                class="action-button"
-                :disabled="!hasValidData"
-              >
-                <QrCodeIcon class="action-icon" />
-                <span>Generate QR Code</span>
-              </button>
-              
-              <button 
                 @click="downloadVCard"
-                class="action-button"
+                class="download-btn"
                 :disabled="!hasValidData"
               >
-                <ArrowDownTrayIcon class="action-icon" />
-                <span>Download vCard</span>
+                <ArrowDownTrayIcon class="w-4 h-4 mr-2" />
+                Download vCard
               </button>
             </div>
           </div>
@@ -107,8 +93,8 @@
 
 <script setup>
 /**
- * Dashboard page - Clean implementation
- * Main interface for managing business cards
+ * Dashboard page - Clean version to avoid compilation conflicts
+ * Main interface for managing business cards with optimized layout
  */
 
 // Define page meta
@@ -121,20 +107,24 @@ definePageMeta({
 import { 
   UserIcon, 
   ArrowTopRightOnSquareIcon, 
-  QrCodeIcon, 
   ArrowDownTrayIcon 
 } from '@heroicons/vue/24/outline'
 
 // Composables
-const { user } = useAuth()
+const authComposable = useAuth()
+const cardComposable = useCard()
+const themeComposable = useTheme()
+
+// Extract methods and data
+const { user: currentUser } = authComposable
 const { 
   getUserCard, 
   saveCard, 
   uploadProfileImage,
   generateVCardDownloadUrl, 
   getCardShareUrl 
-} = useCard()
-const { loadColorsFromCard, getColorsForCard } = useTheme()
+} = cardComposable
+const { loadColorsFromCard, getColorsForCard } = themeComposable
 
 // State
 const cardData = ref({
@@ -172,15 +162,15 @@ const previewCardData = computed(() => {
     ...cardData.value,
     id: actualCardRecord.value?.id || 'preview',
     expand: {
-      user_id: user.value
+      user_id: currentUser.value
     },
     profile_image: actualCardRecord.value?.profile_image || cardData.value.profile_image
   }
 })
 
 const cardShareUrl = computed(() => {
-  if (!user.value?.username) return ''
-  return getCardShareUrl(user.value.username)
+  if (!currentUser.value?.username) return ''
+  return getCardShareUrl(currentUser.value.username)
 })
 
 const cardTitle = computed(() => {
@@ -314,8 +304,8 @@ onMounted(() => {
 
 // SEO
 useSeoMeta({
-  title: 'Dashboard - Hivecard',
-  description: 'Manage your digital business card',
+  title: 'Edit Your Card - Hivecard',
+  description: 'Edit and customize your digital business card with live preview',
   robots: 'noindex, nofollow'
 })
 </script>
@@ -325,29 +315,33 @@ useSeoMeta({
 .dashboard {
   min-height: 100vh;
   background-color: var(--color-surface-secondary);
-  padding: 2rem 0;
+  padding: 1rem 0 2rem; /* Reduced top padding */
 }
 
 .container {
-  max-width: 1280px;
+  max-width: 1600px; /* Increased for more space */
   margin: 0 auto;
   padding: 0 1rem;
 }
 
-/* Page header */
-.page-header {
-  margin-bottom: 2rem;
+/* Editor header (compact) */
+.editor-header {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: var(--color-surface-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 0.5rem;
 }
 
-.page-title {
-  font-size: 2rem;
+.editor-title {
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--color-content-primary);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
-.page-subtitle {
-  font-size: 1rem;
+.editor-subtitle {
+  font-size: 0.875rem;
   color: var(--color-content-secondary);
 }
 
@@ -382,51 +376,99 @@ useSeoMeta({
 /* Dashboard content */
 .dashboard-content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  grid-template-columns: 1fr 520px; /* Slightly wider right column */
+  gap: 1.5rem; /* Reduced gap */
+  align-items: start;
+  min-height: calc(100vh - 120px); /* Adjusted for smaller header */
 }
 
 .editor-column {
   min-width: 0;
+  max-height: calc(100vh - 120px); /* Adjusted for new header */
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  position: relative;
+}
+
+/* Subtle scroll fade effect */
+.editor-column::before {
+  content: '';
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(to bottom, var(--color-surface-secondary), transparent);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Custom scrollbar for editor column */
+.editor-column::-webkit-scrollbar {
+  width: 6px;
+}
+
+.editor-column::-webkit-scrollbar-track {
+  background: var(--color-surface-secondary);
+  border-radius: 3px;
+}
+
+.editor-column::-webkit-scrollbar-thumb {
+  background: var(--color-border-secondary);
+  border-radius: 3px;
+}
+
+.editor-column::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
 }
 
 .preview-column {
   min-width: 0;
+  width: 520px; /* Updated width */
+}
+
+.preview-sticky-container {
+  position: sticky;
+  top: 2rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  border-radius: 0.75rem;
+  background-color: transparent;
 }
 
 /* Section styling */
-.preview-section,
-.actions-section {
+.preview-section {
   background-color: var(--color-surface-primary);
   border: 1px solid var(--color-border-primary);
   border-radius: 0.5rem;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .section-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .section-title {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--color-content-primary);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .section-subtitle {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--color-content-secondary);
 }
 
-/* Preview container */
+/* Preview container - no scaling since using public card component */
 .preview-container {
   background-color: var(--color-surface-secondary);
   border: 1px solid var(--color-border-primary);
   border-radius: 0.5rem;
-  padding: 2rem;
-  min-height: 400px;
+  padding: 0.5rem; /* Minimal padding since public card has its own */
+  min-height: 400px; /* Restore normal height */
 }
 
 .preview-placeholder {
@@ -449,42 +491,54 @@ useSeoMeta({
   color: var(--color-content-secondary);
 }
 
-/* Actions grid */
-.actions-grid {
+/* Additional actions - compact buttons */
+.additional-actions {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
-.action-button {
+.view-public-btn,
+.download-btn {
+  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background-color: var(--color-surface-secondary);
+  justify-content: center;
+  padding: 0.625rem 0.75rem;
   border: 1px solid var(--color-border-primary);
   border-radius: 0.375rem;
-  color: var(--color-content-primary);
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
-.action-button:hover:not(:disabled) {
+.view-public-btn {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-content-primary);
+}
+
+.view-public-btn:hover {
   background-color: var(--color-surface-hover);
+  border-color: var(--color-primary);
+}
+
+.download-btn {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.download-btn:hover:not(:disabled) {
+  background-color: var(--color-primary-darker);
   transform: translateY(-1px);
 }
 
-.action-button:disabled {
+.download-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.action-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  margin-right: 0.75rem;
+  transform: none;
 }
 
 /* Notification toast */
@@ -520,31 +574,74 @@ useSeoMeta({
 }
 
 /* Responsive design */
+@media (min-width: 1400px) {
+  .dashboard-content {
+    grid-template-columns: 1fr 500px;
+    gap: 2rem;
+  }
+}
+
 @media (max-width: 1024px) {
   .dashboard-content {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .editor-column {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+    order: 1;
+  }
+  
+  .editor-column::before {
+    display: none;
   }
   
   .preview-column {
-    order: -1;
+    width: 100%;
+    order: 2;
+  }
+  
+  .preview-sticky-container {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 
 @media (max-width: 768px) {
   .dashboard {
-    padding: 1rem 0;
+    padding: 0.5rem 0 1rem;
   }
   
-  .page-header {
+  .dashboard-content {
+    gap: 1rem;
+  }
+  
+  .editor-header {
+    padding: 0.75rem;
     margin-bottom: 1rem;
   }
   
-  .page-title {
-    font-size: 1.5rem;
+  .editor-title {
+    font-size: 1.25rem;
   }
   
   .preview-container {
-    padding: 1rem;
+    padding: 0.25rem;
+    min-height: 300px;
+  }
+  
+  .additional-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .view-public-btn,
+  .download-btn {
+    padding: 0.75rem;
+    font-size: 0.875rem;
   }
 }
 </style>

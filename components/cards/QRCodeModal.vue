@@ -41,15 +41,8 @@
             </button>
           </div>
           
-          <!-- QR Code image -->
-          <div v-else class="qr-image-container">
-            <img 
-              :src="qrImageUrl" 
-              alt="QR Code"
-              class="qr-image"
-              @load="handleImageLoad"
-              @error="handleImageError"
-            />
+          <!-- QR Code SVG -->
+          <div v-else-if="qrCodeSvg" class="qr-image-container" v-html="qrCodeSvg">
           </div>
         </div>
       </div>
@@ -72,6 +65,14 @@
           <ShareIcon class="w-4 h-4 mr-2" />
           Share
         </button>
+        
+        <button 
+          @click="downloadQRCode"
+          class="btn btn-outlined"
+        >
+          <ArrowDownTrayIcon class="w-4 h-4 mr-2" />
+          Download
+        </button>
       </div>
     </div>
   </div>
@@ -79,15 +80,16 @@
 
 <script setup>
 /**
- * QR Code Modal component - Clean implementation
- * Displays QR code for business card sharing
+ * QR Code Modal component - Using local QR code library
+ * Generates QR codes locally using the included qrcode.min.js library
  */
 
 import {
   XMarkIcon,
   ClipboardIcon,
   ShareIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ArrowDownTrayIcon
 } from '@heroicons/vue/24/outline'
 
 // Props
@@ -112,7 +114,7 @@ const emit = defineEmits(['close'])
 // State
 const loading = ref(false)
 const error = ref(false)
-const qrImageUrl = ref('')
+const qrCodeSvg = ref('')
 
 // Computed properties
 const canShare = computed(() => {
@@ -120,39 +122,79 @@ const canShare = computed(() => {
 })
 
 /**
- * Generate QR code image URL
+ * Load QR Code library
  */
-const generateQRCode = () => {
+const loadQRLibrary = () => {
+  return new Promise((resolve, reject) => {
+    if (import.meta.server) {
+      reject(new Error('Cannot load QR library on server'))
+      return
+    }
+
+    // Check if QRCode is already available
+    if (window.QRCode) {
+      resolve(window.QRCode)
+      return
+    }
+
+    // Load the script
+    const script = document.createElement('script')
+    script.src = '/qrcode.min.js'
+    script.onload = () => {
+      if (window.QRCode) {
+        resolve(window.QRCode)
+      } else {
+        reject(new Error('QRCode library not found after loading'))
+      }
+    }
+    script.onerror = () => {
+      reject(new Error('Failed to load QR code library'))
+    }
+    document.head.appendChild(script)
+  })
+}
+
+/**
+ * Generate QR code using local library
+ */
+const generateQRCode = async () => {
   if (!props.cardUrl) return
   
   loading.value = true
   error.value = false
+  qrCodeSvg.value = ''
   
   try {
-    // Use QR Server API for QR code generation
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(props.cardUrl)}`
-    qrImageUrl.value = qrUrl
+    console.log('Generating QR code for URL:', props.cardUrl)
+    
+    // Load QR library if not available
+    const QRCode = await loadQRLibrary()
+    
+    // Create QR code instance
+    const qr = new QRCode({
+      content: props.cardUrl,
+      width: 200,
+      height: 200,
+      color: '#000000',
+      background: '#ffffff',
+      padding: 2,
+      ecl: 'M' // Error correction level
+    })
+    
+    // Generate SVG
+    const svg = qr.svg({
+      container: 'svg-viewbox'
+    })
+    
+    qrCodeSvg.value = svg
+    console.log('QR code generated successfully')
+    
   } catch (err) {
     console.error('QR code generation error:', err)
     error.value = true
+  } finally {
     loading.value = false
   }
-}
-
-/**
- * Handle QR image load success
- */
-const handleImageLoad = () => {
-  loading.value = false
-  error.value = false
-}
-
-/**
- * Handle QR image load error
- */
-const handleImageError = () => {
-  loading.value = false
-  error.value = true
 }
 
 /**
@@ -172,9 +214,10 @@ const copyCardUrl = async () => {
   
   try {
     await navigator.clipboard.writeText(props.cardUrl)
-    // Could add toast notification here
+    showToast('Link copied to clipboard!')
   } catch (error) {
     console.error('Failed to copy URL:', error)
+    showToast('Failed to copy link', 'error')
   }
 }
 
@@ -198,6 +241,102 @@ const shareCard = async () => {
 }
 
 /**
+ * Download QR code as PNG
+ */
+const downloadQRCode = async () => {
+  if (!qrCodeSvg.value) return
+  
+  try {
+    // Create canvas from SVG
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const img = new Image()
+    
+    // Set canvas size
+    canvas.width = 400
+    canvas.height = 400
+    
+    // Convert SVG to data URL
+    const svgBlob = new Blob([qrCodeSvg.value], { type: 'image/svg+xml' })
+    const svgUrl = URL.createObjectURL(svgBlob)
+    
+    img.onload = () => {
+      // Draw image to canvas
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      
+      // Convert to PNG and download
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${props.cardTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_qr_code.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        showToast('QR code downloaded!')
+      }, 'image/png')
+      
+      URL.revokeObjectURL(svgUrl)
+    }
+    
+    img.src = svgUrl
+    
+  } catch (error) {
+    console.error('Download failed:', error)
+    showToast('Failed to download QR code', 'error')
+  }
+}
+
+/**
+ * Show toast notification
+ */
+const showToast = (message, type = 'success') => {
+  if (!import.meta.client) return
+  
+  const toast = document.createElement('div')
+  toast.className = 'toast-notification'
+  toast.textContent = message
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#ef4444' : '#10b981'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 1001;
+    animation: slideIn 0.3s ease-out;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  `
+  
+  // Add CSS animation
+  if (!document.getElementById('toast-styles')) {
+    const style = document.createElement('style')
+    style.id = 'toast-styles'
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `
+    document.head.appendChild(style)
+  }
+  
+  document.body.appendChild(toast)
+  
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.remove()
+    }
+  }, 3000)
+}
+
+/**
  * Handle escape key
  */
 const handleEscapeKey = (event) => {
@@ -208,7 +347,7 @@ const handleEscapeKey = (event) => {
 
 // Watch for show prop changes
 watch(() => props.show, (newShow) => {
-  if (newShow) {
+  if (newShow && import.meta.client) {
     generateQRCode()
   }
 })
@@ -316,6 +455,11 @@ onUnmounted(() => {
   background-color: white;
   border: 1px solid var(--color-border-primary);
   border-radius: 0.5rem;
+  min-width: 220px;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .qr-loading,
@@ -331,12 +475,16 @@ onUnmounted(() => {
 .qr-image-container {
   width: 200px;
   height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.qr-image {
+.qr-image-container :deep(svg) {
   width: 100%;
   height: 100%;
-  display: block;
+  max-width: 200px;
+  max-height: 200px;
 }
 
 .spinner {
@@ -373,6 +521,7 @@ onUnmounted(() => {
 .modal-actions {
   display: flex;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -387,6 +536,8 @@ onUnmounted(() => {
   transition: all 0.2s ease;
   text-decoration: none;
   border: none;
+  font-size: 0.875rem;
+  min-width: 0;
 }
 
 .btn-primary {
@@ -420,6 +571,8 @@ onUnmounted(() => {
   
   .qr-container {
     padding: 0.75rem;
+    min-width: 180px;
+    min-height: 180px;
   }
   
   .qr-loading,
@@ -431,6 +584,10 @@ onUnmounted(() => {
   
   .modal-actions {
     flex-direction: column;
+  }
+  
+  .btn {
+    min-width: auto;
   }
 }
 </style>

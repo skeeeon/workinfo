@@ -1,11 +1,11 @@
 /**
- * Public card composable - SSR-compatible data fetching
- * Uses direct HTTP calls to PocketBase REST API for public data
+ * Public card composable - Corrected to use direct username field
+ * The username is stored directly in the cards collection, not in users
  */
 
 export const usePublicCard = () => {
   /**
-   * Fetch public card by username - SSR compatible
+   * Fetch public card by username - Uses direct username field in cards collection
    * @param {string} username - Username to lookup
    * @returns {Promise<Object|null>} Card data
    */
@@ -16,29 +16,11 @@ export const usePublicCard = () => {
       
       console.log('Fetching public card for username:', username)
       
-      // Step 1: Get user by username using direct API call
-      const userResponse = await $fetch(`${baseUrl}/api/collections/users/records`, {
-        query: {
-          filter: `username="${username}"`,
-          perPage: 1
-        }
-      })
-      
-      console.log('User API response:', userResponse)
-      
-      if (!userResponse.items || userResponse.items.length === 0) {
-        console.log('No user found with username:', username)
-        return null
-      }
-      
-      const user = userResponse.items[0]
-      console.log('Found user:', user.id)
-      
-      // Step 2: Get user's active card using direct API call
+      // Query cards collection using direct username field
       const cardResponse = await $fetch(`${baseUrl}/api/collections/cards/records`, {
         query: {
-          filter: `user_id="${user.id}" && is_active=true`,
-          expand: 'user_id',
+          filter: `username='${username}' && is_active=true`,
+          expand: 'user_id', // Still expand user_id for additional user data if needed
           perPage: 1
         }
       })
@@ -46,22 +28,40 @@ export const usePublicCard = () => {
       console.log('Card API response:', cardResponse)
       
       if (!cardResponse.items || cardResponse.items.length === 0) {
-        console.log('No active card found for user:', user.id)
+        console.log('No active card found for username:', username)
         return null
       }
       
       const card = cardResponse.items[0]
       console.log('Found card:', card.id)
       
-      // Ensure proper expand structure
+      // Create expand structure for compatibility with existing components
       if (!card.expand) {
-        card.expand = { user_id: user }
+        card.expand = {}
+      }
+      
+      // If user_id expansion failed, create a minimal user object from card data
+      if (!card.expand.user_id) {
+        card.expand.user_id = {
+          id: card.user_id,
+          username: card.username
+        }
       }
       
       return card
       
     } catch (error) {
       console.error('Error fetching public card:', error)
+      
+      // Log the specific error for debugging
+      if (error.status === 400) {
+        console.error('Filter error - check PocketBase permissions and filter syntax')
+      } else if (error.status === 403) {
+        console.error('Permission denied - check cards collection list rules')
+      } else if (error.status === 404) {
+        console.error('Collection not found - check PocketBase URL and collection name')
+      }
+      
       return null
     }
   }
@@ -100,9 +100,27 @@ export const usePublicCard = () => {
     return `${config.public.siteUrl}/users/${username}`
   }
   
+  /**
+   * Validate if a card is publicly accessible
+   * @param {Object} cardData - Card data to validate
+   * @returns {boolean} Is valid for public display
+   */
+  const isValidPublicCard = (cardData) => {
+    if (!cardData) return false
+    
+    // Must have required fields
+    const hasRequiredFields = cardData.first_name && 
+                             cardData.last_name && 
+                             cardData.is_active &&
+                             cardData.username
+    
+    return hasRequiredFields
+  }
+  
   return {
     fetchPublicCard,
     getPublicImageUrl,
-    getPublicShareUrl
+    getPublicShareUrl,
+    isValidPublicCard
   }
 }
