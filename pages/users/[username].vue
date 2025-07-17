@@ -13,7 +13,7 @@
       </div>
       <h1 class="error-title">Card Not Found</h1>
       <p class="error-message">
-        The business card you're looking for doesn't exist or may have been moved.
+        The business card you're looking for doesn't exist or may have been removed.
       </p>
       <div class="error-actions">
         <NuxtLink to="/" class="btn btn-primary">
@@ -25,7 +25,7 @@
     <!-- Card content -->
     <div v-else class="card-content">
       <div class="card-container">
-        <BusinessCard 
+        <PublicBusinessCard 
           :card="cardData" 
           @show-qr="showQRModal = true" 
         />
@@ -54,8 +54,8 @@
 
 <script setup>
 /**
- * Public business card page - Clean implementation
- * Displays a user's business card accessible to anyone
+ * Public business card page - Fixed with proper SSR
+ * Uses direct API calls instead of PocketBase client
  */
 
 // Define layout
@@ -67,7 +67,7 @@ definePageMeta({
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 
 // Composables
-const { getCardByUsername, getCardShareUrl } = useCard()
+const { fetchPublicCard, getPublicShareUrl } = usePublicCard()
 const { loadColorsFromCard } = useTheme()
 const route = useRoute()
 
@@ -77,21 +77,32 @@ const username = route.params.username
 // State
 const showQRModal = ref(false)
 
-// Fetch card data with SSR support
+// Fetch card data with SSR support using direct API calls
 const { data: cardData, pending, error } = await useLazyAsyncData(
-  `card-${username}`,
-  () => getCardByUsername(username),
+  `public-card-${username}`,
+  () => fetchPublicCard(username),
   {
     default: () => null,
-    server: true
+    server: true, // Enable SSR
+    transform: (data) => {
+      console.log('Transform received data:', data)
+      return data
+    }
   }
 )
+
+// Debug logging
+console.log('Page state:', {
+  username,
+  pending: pending.value,
+  error: error.value,
+  hasCardData: !!cardData.value
+})
 
 // Computed properties
 const cardShareUrl = computed(() => {
   if (!cardData.value) return ''
-  const config = useRuntimeConfig()
-  return `${config.public.siteUrl}/users/${username}`
+  return getPublicShareUrl(username)
 })
 
 const cardTitle = computed(() => {
@@ -128,7 +139,25 @@ watchEffect(() => {
       ogTitle: `${displayName} - Digital Business Card`,
       ogDescription: description,
       ogType: 'profile',
-      ogUrl: cardShareUrl.value
+      ogUrl: cardShareUrl.value,
+      // Add structured data for better SEO
+      script: [{
+        type: 'application/ld+json',
+        children: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Person',
+          name: displayName,
+          jobTitle: cardData.value.title,
+          worksFor: cardData.value.company ? {
+            '@type': 'Organization',
+            name: cardData.value.company
+          } : undefined,
+          description: cardData.value.note,
+          email: cardData.value.email,
+          telephone: cardData.value.mobile || cardData.value.office,
+          url: cardData.value.website
+        })
+      }]
     })
   }
 })

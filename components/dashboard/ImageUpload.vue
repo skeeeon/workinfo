@@ -1,11 +1,15 @@
 <template>
   <div class="image-upload">
     <!-- Current Image Display -->
-    <div class="current-image mb-4">
+    <div class="current-image">
       <div v-if="currentImageUrl" class="image-container">
-        <img :src="currentImageUrl" 
-             :alt="altText"
-             class="profile-image" />
+        <img 
+          :src="currentImageUrl" 
+          :alt="altText"
+          class="profile-image" 
+          @error="handleImageError"
+          @load="handleImageLoad"
+        />
         <button 
           @click="removeImage"
           class="remove-btn"
@@ -17,12 +21,8 @@
       </div>
       
       <div v-else class="placeholder-container">
-        <UserIcon class="w-16 h-16" 
-                  :style="{ color: 'var(--color-content-tertiary)' }" />
-        <p class="text-sm mt-2" 
-           :style="{ color: 'var(--color-content-secondary)' }">
-          No image uploaded
-        </p>
+        <UserIcon class="w-16 h-16 placeholder-icon" />
+        <p class="placeholder-text">No image uploaded</p>
       </div>
     </div>
 
@@ -41,60 +41,32 @@
       <!-- Upload Button -->
       <button 
         @click="triggerFileSelect"
-        class="btn btn-outlined w-full"
+        class="upload-btn"
         :disabled="disabled || uploading"
       >
-        <span v-if="uploading" class="spinner mr-2"></span>
+        <span v-if="uploading" class="spinner"></span>
         <PhotoIcon v-else class="w-4 h-4 mr-2" />
         {{ uploading ? 'Uploading...' : (currentImageUrl ? 'Change Image' : 'Upload Image') }}
       </button>
 
-      <!-- Upload Progress -->
-      <div v-if="uploadProgress > 0 && uploadProgress < 100" 
-           class="progress-bar mt-3">
-        <div class="progress-fill" 
-             :style="{ width: uploadProgress + '%' }">
-        </div>
-      </div>
-
       <!-- Upload Guidelines -->
-      <div class="upload-guidelines mt-3">
-        <p class="text-xs" 
-           :style="{ color: 'var(--color-content-tertiary)' }">
+      <div class="upload-guidelines">
+        <p class="guideline-text">
           Recommended: Square image, at least 400x400px. Max size: 5MB.
         </p>
-        <p class="text-xs mt-1" 
-           :style="{ color: 'var(--color-content-tertiary)' }">
+        <p class="guideline-text">
           Supported formats: JPG, PNG, WebP
         </p>
       </div>
 
       <!-- Error Message -->
-      <div v-if="errorMessage" class="error-message mt-3">
+      <div v-if="errorMessage" class="error-message">
         {{ errorMessage }}
       </div>
 
       <!-- Success Message -->
-      <div v-if="successMessage" class="success-message mt-3">
+      <div v-if="successMessage" class="success-message">
         {{ successMessage }}
-      </div>
-
-      <!-- Debug Info -->
-      <div v-if="showDebug" class="debug-info mt-3 p-2 bg-gray-100 rounded text-xs">
-        <div><strong>Debug Info:</strong></div>
-        <div>Current Image: {{ currentImage || 'None' }}</div>
-        <div>Preview URL: {{ previewUrl || 'None' }}</div>
-        <div>Upload State: {{ uploading ? 'Uploading' : 'Ready' }}</div>
-        <div>Progress: {{ uploadProgress }}%</div>
-        <div>Last Error: {{ errorMessage || 'None' }}</div>
-      </div>
-
-      <!-- Debug Toggle -->
-      <div class="mt-2 text-center">
-        <button @click="showDebug = !showDebug" 
-                class="text-xs text-gray-500 hover:text-gray-700">
-          {{ showDebug ? 'Hide' : 'Show' }} Debug Info
-        </button>
       </div>
     </div>
   </div>
@@ -102,11 +74,10 @@
 
 <script setup>
 /**
- * Image upload component for profile pictures - Complete Fix
- * Handles file selection, validation, upload, and preview with debugging
+ * Image upload component - Fixed URL generation
+ * Properly handles card objects and generates correct PocketBase URLs
  */
 
-// Import Heroicons
 import { 
   UserIcon, 
   PhotoIcon, 
@@ -116,7 +87,11 @@ import {
 // Props
 const props = defineProps({
   currentImage: {
-    type: [String, File],
+    type: [String, Object], // Can be filename string or full card object
+    default: null
+  },
+  cardId: {
+    type: String,
     default: null
   },
   disabled: {
@@ -132,45 +107,49 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['upload', 'remove'])
 
+// Composables
+const { getProfileImageUrl } = useCard()
+
 // State
 const fileInput = ref(null)
 const uploading = ref(false)
-const uploadProgress = ref(0)
 const errorMessage = ref('')
 const successMessage = ref('')
 const previewUrl = ref(null)
-const showDebug = ref(false)
 
 // Computed properties
 const currentImageUrl = computed(() => {
-  console.log('ImageUpload: Computing current image URL:', {
-    previewUrl: previewUrl.value,
+  console.log('ImageUpload: Computing image URL for:', {
     currentImage: props.currentImage,
-    type: typeof props.currentImage
+    cardId: props.cardId,
+    previewUrl: previewUrl.value
   })
   
-  // Priority: 1. Local preview (for immediate feedback), 2. Pocketbase URL
+  // Priority: 1. Local preview, 2. Constructed PocketBase URL
   if (previewUrl.value) {
-    console.log('ImageUpload: Using preview URL')
     return previewUrl.value
   }
   
-  // If currentImage is a card object with profile_image, generate proper URL
-  if (props.currentImage && typeof props.currentImage === 'object' && props.currentImage.profile_image) {
-    console.log('ImageUpload: Generating URL from card object')
-    const { getProfileImageUrl } = useCard()
-    const url = getProfileImageUrl(props.currentImage)
-    console.log('ImageUpload: Generated URL:', url)
-    return url
+  // If currentImage is a card object with profile_image
+  if (props.currentImage && typeof props.currentImage === 'object') {
+    return getProfileImageUrl(props.currentImage)
   }
   
-  // If currentImage is already a URL string
-  if (typeof props.currentImage === 'string') {
-    console.log('ImageUpload: Using string URL')
+  // If currentImage is a filename string and we have cardId
+  if (typeof props.currentImage === 'string' && props.cardId) {
+    const cardData = {
+      id: props.cardId,
+      profile_image: props.currentImage
+    }
+    return getProfileImageUrl(cardData)
+  }
+  
+  // If currentImage is already a full URL
+  if (typeof props.currentImage === 'string' && props.currentImage.startsWith('http')) {
     return props.currentImage
   }
   
-  console.log('ImageUpload: No image to display')
+  console.log('ImageUpload: No valid image URL found')
   return null
 })
 
@@ -178,8 +157,7 @@ const currentImageUrl = computed(() => {
  * Trigger file input click
  */
 const triggerFileSelect = () => {
-  console.log('ImageUpload: Triggering file select')
-  if (fileInput.value) {
+  if (fileInput.value && !disabled && !uploading.value) {
     fileInput.value.click()
   }
 }
@@ -189,8 +167,6 @@ const triggerFileSelect = () => {
  */
 const handleFileSelect = (event) => {
   const file = event.target.files[0]
-  console.log('ImageUpload: File selected:', file?.name)
-  
   if (!file) return
 
   // Clear previous messages
@@ -200,7 +176,6 @@ const handleFileSelect = (event) => {
   const validation = validateFile(file)
   if (!validation.valid) {
     errorMessage.value = validation.error
-    console.error('ImageUpload: File validation failed:', validation.error)
     return
   }
 
@@ -215,12 +190,6 @@ const handleFileSelect = (event) => {
  * Validate selected file
  */
 const validateFile = (file) => {
-  console.log('ImageUpload: Validating file:', {
-    name: file.name,
-    size: file.size,
-    type: file.type
-  })
-  
   // Check file type
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
@@ -231,7 +200,7 @@ const validateFile = (file) => {
   }
 
   // Check file size (5MB max)
-  const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+  const maxSize = 5 * 1024 * 1024
   if (file.size > maxSize) {
     return {
       valid: false,
@@ -246,59 +215,35 @@ const validateFile = (file) => {
  * Create image preview
  */
 const createPreview = (file) => {
-  console.log('ImageUpload: Creating preview for:', file.name)
-  
   const reader = new FileReader()
   reader.onload = (e) => {
     previewUrl.value = e.target.result
-    console.log('ImageUpload: Preview created successfully')
   }
-  reader.onerror = (e) => {
-    console.error('ImageUpload: Preview creation failed:', e)
+  reader.onerror = () => {
+    errorMessage.value = 'Failed to create image preview'
   }
   reader.readAsDataURL(file)
 }
 
 /**
- * Upload file - Fixed version with proper parent communication
+ * Upload file
  */
 const uploadFile = async (file) => {
-  console.log('ImageUpload: Starting upload process for:', file.name)
-  
   uploading.value = true
-  uploadProgress.value = 0
 
   try {
-    // Simulate upload progress
-    const progressInterval = setInterval(() => {
-      if (uploadProgress.value < 90) {
-        uploadProgress.value += 10
-      }
-    }, 100)
-
-    console.log('ImageUpload: Emitting upload event to parent component')
-    
-    // Emit upload event to parent (dashboard) - this triggers the actual upload
+    // Emit upload event to parent component
     emit('upload', file)
-
-    // Wait for upload to complete (parent should handle actual upload)
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    // Complete progress
-    clearInterval(progressInterval)
-    uploadProgress.value = 100
-
-    console.log('ImageUpload: Upload process completed')
 
     // Show success message
     successMessage.value = 'Image uploaded successfully!'
     setTimeout(() => {
       successMessage.value = ''
-      uploadProgress.value = 0
-    }, 3000)
+      previewUrl.value = null // Clear preview after success
+    }, 2000)
 
   } catch (error) {
-    console.error('ImageUpload: Upload error:', error)
+    console.error('Upload error:', error)
     errorMessage.value = 'Failed to upload image. Please try again.'
     previewUrl.value = null
   } finally {
@@ -310,8 +255,6 @@ const uploadFile = async (file) => {
  * Remove current image
  */
 const removeImage = () => {
-  console.log('ImageUpload: Removing current image')
-  
   previewUrl.value = null
   clearMessages()
   emit('remove')
@@ -330,26 +273,38 @@ const clearMessages = () => {
   successMessage.value = ''
 }
 
-// Clear preview when current image prop changes
+/**
+ * Handle image loading errors
+ */
+const handleImageError = (event) => {
+  console.error('Failed to load image:', event.target.src)
+  // Hide broken image
+  event.target.style.display = 'none'
+}
+
+/**
+ * Handle successful image loading
+ */
+const handleImageLoad = (event) => {
+  console.log('Image loaded successfully:', event.target.src)
+  event.target.style.display = 'block'
+}
+
+// Watch for currentImage changes
 watch(() => props.currentImage, () => {
-  console.log('ImageUpload: Current image prop changed:', props.currentImage)
   if (!props.currentImage) {
     previewUrl.value = null
   }
-})
-
-// Debug: Log when component mounts
-onMounted(() => {
-  console.log('ImageUpload: Component mounted with props:', {
-    currentImage: props.currentImage,
-    disabled: props.disabled
-  })
 })
 </script>
 
 <style scoped>
 .image-upload {
   max-width: 300px;
+}
+
+.current-image {
+  margin-bottom: 1rem;
 }
 
 .image-container {
@@ -385,7 +340,6 @@ onMounted(() => {
 
 .remove-btn:hover {
   transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
 .remove-btn:disabled {
@@ -405,19 +359,45 @@ onMounted(() => {
   background-color: var(--color-surface-secondary);
 }
 
-.progress-bar {
-  width: 100%;
-  height: 4px;
-  background-color: var(--color-surface-tertiary);
-  border-radius: 2px;
-  overflow: hidden;
+.placeholder-icon {
+  color: var(--color-content-tertiary);
+  margin-bottom: 0.5rem;
 }
 
-.progress-fill {
-  height: 100%;
+.placeholder-text {
+  font-size: 0.75rem;
+  color: var(--color-content-secondary);
+  text-align: center;
+  margin: 0;
+}
+
+.upload-interface {
+  space-y: 1rem;
+}
+
+.upload-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-btn:hover:not(:disabled) {
   background-color: var(--color-primary);
-  transition: width 0.3s ease;
-  border-radius: 2px;
+  color: white;
+}
+
+.upload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .spinner {
@@ -427,11 +407,23 @@ onMounted(() => {
   border-top: 2px solid var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin-right: 0.5rem;
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.upload-guidelines {
+  margin-top: 0.75rem;
+}
+
+.guideline-text {
+  font-size: 0.75rem;
+  color: var(--color-content-tertiary);
+  margin: 0.25rem 0;
+  line-height: 1.3;
 }
 
 .error-message {
@@ -441,6 +433,7 @@ onMounted(() => {
   border-radius: 0.375rem;
   color: var(--color-error);
   font-size: 0.875rem;
+  margin-top: 0.5rem;
 }
 
 .success-message {
@@ -450,19 +443,10 @@ onMounted(() => {
   border-radius: 0.375rem;
   color: var(--color-success);
   font-size: 0.875rem;
+  margin-top: 0.5rem;
 }
 
-.debug-info {
-  border: 1px solid #ccc;
-  font-family: monospace;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn:disabled:hover {
-  transform: none;
+.hidden {
+  display: none;
 }
 </style>
