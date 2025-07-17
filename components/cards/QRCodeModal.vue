@@ -2,74 +2,64 @@
   <!-- Modal backdrop -->
   <div 
     v-if="show" 
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+    class="modal-backdrop"
     @click="handleBackdropClick"
   >
     <!-- Modal content -->
-    <div 
-      class="modal-content rounded-2xl shadow-xl max-w-md w-full p-6 relative"
-      :style="{ backgroundColor: 'var(--color-surface-primary)' }"
-      @click.stop
-    >
+    <div class="modal-content" @click.stop>
       <!-- Close button -->
       <button 
-        @click="handleCloseClick"
-        class="absolute top-4 right-4 p-2 rounded-full transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-        :style="{ 
-          backgroundColor: 'var(--color-surface-secondary)',
-          color: 'var(--color-content-primary)'
-        }"
-        aria-label="Close QR code modal"
+        @click="$emit('close')"
+        class="close-btn"
+        aria-label="Close modal"
       >
         <XMarkIcon class="w-5 h-5" />
       </button>
 
-      <!-- Modal header -->
-      <div class="text-center mb-6">
-        <h3 class="text-xl font-semibold mb-2" 
-            :style="{ color: 'var(--color-content-primary)' }">
-          Scan QR Code
-        </h3>
-        <p class="text-sm" 
-           :style="{ color: 'var(--color-content-secondary)' }">
+      <!-- Header -->
+      <div class="modal-header">
+        <h3 class="modal-title">Scan QR Code</h3>
+        <p class="modal-subtitle">
           Share this card by scanning with any QR code reader
         </p>
       </div>
 
-      <!-- Debug info -->
-      <div v-if="debugMode" class="mb-4 p-2 bg-gray-100 rounded text-xs">
-        <p>Card URL: {{ cardUrl }}</p>
-        <p>QR URL: {{ qrUrl }}</p>
-        <p>Generating: {{ generating }}</p>
-        <p>Error: {{ error }}</p>
-      </div>
-
-      <!-- QR Code container -->
-      <div class="qr-container text-center mb-6">
-        <div 
-          ref="qrCodeContainer"
-          class="qr-code-wrapper inline-block p-4 rounded-lg"
-          :style="{ backgroundColor: 'white' }"
-        >
+      <!-- QR Code -->
+      <div class="qr-section">
+        <div class="qr-container">
           <!-- Loading state -->
-          <div v-if="generating" class="flex items-center justify-center" style="width: 200px; height: 200px;">
+          <div v-if="loading" class="qr-loading">
             <div class="spinner"></div>
           </div>
           
           <!-- Error state -->
-          <div v-else-if="error" class="flex items-center justify-center flex-col" style="width: 200px; height: 200px;">
+          <div v-else-if="error" class="qr-error">
             <ExclamationTriangleIcon class="w-12 h-12 text-red-500 mb-2" />
             <p class="text-sm text-red-600">Failed to generate QR code</p>
-            <button @click="retryGeneration" class="text-xs text-blue-500 mt-1">Retry</button>
+            <button @click="generateQRCode" class="retry-btn">
+              Retry
+            </button>
+          </div>
+          
+          <!-- QR Code image -->
+          <div v-else class="qr-image-container">
+            <img 
+              :src="qrImageUrl" 
+              alt="QR Code"
+              class="qr-image"
+              @load="handleImageLoad"
+              @error="handleImageError"
+            />
           </div>
         </div>
       </div>
 
-      <!-- Share options -->
-      <div class="flex flex-col sm:flex-row gap-3">
+      <!-- Action buttons -->
+      <div class="modal-actions">
         <button 
           @click="copyCardUrl"
-          class="btn btn-outlined flex-1 inline-flex items-center justify-center">
+          class="btn btn-outlined"
+        >
           <ClipboardIcon class="w-4 h-4 mr-2" />
           Copy URL
         </button>
@@ -77,16 +67,10 @@
         <button 
           v-if="canShare"
           @click="shareCard"
-          class="btn btn-primary flex-1 inline-flex items-center justify-center">
+          class="btn btn-primary"
+        >
           <ShareIcon class="w-4 h-4 mr-2" />
           Share
-        </button>
-      </div>
-
-      <!-- Toggle debug mode -->
-      <div class="mt-4 text-center">
-        <button @click="debugMode = !debugMode" class="text-xs text-gray-500">
-          {{ debugMode ? 'Hide' : 'Show' }} Debug Info
         </button>
       </div>
     </div>
@@ -95,11 +79,10 @@
 
 <script setup>
 /**
- * QR Code modal component for sharing business cards
- * Generates QR codes using QR Server API with debugging
+ * QR Code Modal component - Clean implementation
+ * Displays QR code for business card sharing
  */
 
-// Import Heroicons
 import {
   XMarkIcon,
   ClipboardIcon,
@@ -126,104 +109,59 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['close'])
 
-// Template refs
-const qrCodeContainer = ref(null)
-
 // State
-const generating = ref(false)
+const loading = ref(false)
 const error = ref(false)
-const debugMode = ref(false)
+const qrImageUrl = ref('')
 
 // Computed properties
 const canShare = computed(() => {
   return import.meta.client && 'share' in navigator
 })
 
-const qrUrl = computed(() => {
-  if (!props.cardUrl) return ''
-  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(props.cardUrl)}`
-})
-
 /**
- * Handle backdrop click to close modal
+ * Generate QR code image URL
  */
-const handleBackdropClick = (event) => {
-  // Only close if clicking the backdrop, not the modal content
-  if (event.target === event.currentTarget) {
-    console.log('QR Modal: Backdrop clicked, closing modal')
-    emit('close')
-  }
-}
-
-/**
- * Handle close button click
- */
-const handleCloseClick = () => {
-  console.log('QR Modal: Close button clicked')
-  emit('close')
-}
-
-/**
- * Generate QR code using QR Server API
- */
-const generateQRCode = async () => {
-  if (!qrCodeContainer.value || !props.cardUrl) {
-    console.log('Missing container or card URL')
-    return
-  }
+const generateQRCode = () => {
+  if (!props.cardUrl) return
   
-  generating.value = true
+  loading.value = true
   error.value = false
   
   try {
-    console.log('Generating QR code for:', props.cardUrl)
-    
-    // Clear existing content
-    qrCodeContainer.value.innerHTML = ''
-    
-    // Create QR code image using QR Server API
-    const qrImageUrl = qrUrl.value
-    console.log('QR image URL:', qrImageUrl)
-    
-    // Create image element
-    const img = document.createElement('img')
-    img.src = qrImageUrl
-    img.alt = 'QR Code for business card'
-    img.style.width = '200px'
-    img.style.height = '200px'
-    img.style.display = 'block'
-    img.crossOrigin = 'anonymous' // Add this for CORS
-    
-    // Handle image load/error
-    img.onload = () => {
-      console.log('QR code loaded successfully')
-      generating.value = false
-    }
-    
-    img.onerror = (err) => {
-      console.error('QR code failed to load:', err)
-      generating.value = false
-      error.value = true
-    }
-    
-    // Append to container
-    qrCodeContainer.value.appendChild(img)
-    
+    // Use QR Server API for QR code generation
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(props.cardUrl)}`
+    qrImageUrl.value = qrUrl
   } catch (err) {
     console.error('QR code generation error:', err)
-    generating.value = false
     error.value = true
+    loading.value = false
   }
 }
 
 /**
- * Retry QR code generation
+ * Handle QR image load success
  */
-const retryGeneration = () => {
+const handleImageLoad = () => {
+  loading.value = false
   error.value = false
-  nextTick(() => {
-    generateQRCode()
-  })
+}
+
+/**
+ * Handle QR image load error
+ */
+const handleImageError = () => {
+  loading.value = false
+  error.value = true
+}
+
+/**
+ * Handle backdrop click
+ */
+const handleBackdropClick = (event) => {
+  if (event.target === event.currentTarget) {
+    emit('close')
+  }
 }
 
 /**
@@ -234,9 +172,7 @@ const copyCardUrl = async () => {
   
   try {
     await navigator.clipboard.writeText(props.cardUrl)
-    
     // Could add toast notification here
-    console.log('URL copied to clipboard')
   } catch (error) {
     console.error('Failed to copy URL:', error)
   }
@@ -246,12 +182,12 @@ const copyCardUrl = async () => {
  * Share card using Web Share API
  */
 const shareCard = async () => {
-  if (!import.meta.client || !navigator.share) return
+  if (!canShare.value) return
   
   try {
     await navigator.share({
       title: props.cardTitle,
-      text: `View this digital business card`,
+      text: 'View this digital business card',
       url: props.cardUrl
     })
   } catch (error) {
@@ -261,52 +197,59 @@ const shareCard = async () => {
   }
 }
 
-// Watch for show prop changes to generate QR code
-watch(() => props.show, (newShow) => {
-  if (newShow) {
-    console.log('Modal opened, generating QR code...')
-    // Wait for DOM update
-    nextTick(() => {
-      generateQRCode()
-    })
-  }
-})
-
-// Watch for card URL changes
-watch(() => props.cardUrl, (newUrl) => {
-  if (props.show && newUrl) {
-    console.log('Card URL changed, regenerating QR code...')
-    nextTick(() => {
-      generateQRCode()
-    })
-  }
-})
-
-// Handle escape key
-const handleEscKey = (event) => {
+/**
+ * Handle escape key
+ */
+const handleEscapeKey = (event) => {
   if (event.key === 'Escape' && props.show) {
     emit('close')
   }
 }
 
-// Setup event listeners
-onMounted(() => {
-  if (import.meta.client) {
-    document.addEventListener('keydown', handleEscKey)
+// Watch for show prop changes
+watch(() => props.show, (newShow) => {
+  if (newShow) {
+    generateQRCode()
   }
 })
 
-// Clean up event listeners
+// Setup event listeners
+onMounted(() => {
+  if (import.meta.client) {
+    document.addEventListener('keydown', handleEscapeKey)
+  }
+})
+
 onUnmounted(() => {
   if (import.meta.client) {
-    document.removeEventListener('keydown', handleEscKey)
+    document.removeEventListener('keydown', handleEscapeKey)
   }
 })
 </script>
 
 <style scoped>
+/* Modal backdrop */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* Modal content */
 .modal-content {
+  background-color: var(--color-surface-primary);
   border: 1px solid var(--color-border-primary);
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 28rem;
+  width: 100%;
+  padding: 1.5rem;
+  position: relative;
   animation: modal-appear 0.2s ease-out;
 }
 
@@ -321,10 +264,79 @@ onUnmounted(() => {
   }
 }
 
-.qr-code-wrapper {
+/* Close button */
+.close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--color-surface-secondary);
+  color: var(--color-content-primary);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background-color: var(--color-surface-hover);
+}
+
+/* Header */
+.modal-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-content-primary);
+  margin-bottom: 0.5rem;
+}
+
+.modal-subtitle {
+  font-size: 0.875rem;
+  color: var(--color-content-secondary);
+}
+
+/* QR Section */
+.qr-section {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.qr-container {
+  display: inline-block;
+  padding: 1rem;
+  background-color: white;
   border: 1px solid var(--color-border-primary);
-  max-width: 240px;
-  margin: 0 auto;
+  border-radius: 0.5rem;
+}
+
+.qr-loading,
+.qr-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  height: 200px;
+}
+
+.qr-image-container {
+  width: 200px;
+  height: 200px;
+}
+
+.qr-image {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .spinner {
@@ -341,31 +353,84 @@ onUnmounted(() => {
   100% { transform: rotate(360deg); }
 }
 
-.btn {
+.retry-btn {
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.btn:hover {
-  transform: translateY(-1px);
+.retry-btn:hover {
+  background-color: var(--color-primary-darker);
+}
+
+/* Action buttons */
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  border: none;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
 }
 
 .btn-primary:hover {
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  background-color: var(--color-primary-darker);
+  transform: translateY(-1px);
+}
+
+.btn-outlined {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 .btn-outlined:hover {
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+  background-color: var(--color-primary);
+  color: white;
+  transform: translateY(-1px);
 }
 
-/* Mobile responsiveness */
+/* Responsive design */
 @media (max-width: 640px) {
   .modal-content {
     margin: 1rem;
     max-width: calc(100vw - 2rem);
   }
   
-  .qr-code-wrapper {
-    max-width: 200px;
+  .qr-container {
+    padding: 0.75rem;
+  }
+  
+  .qr-loading,
+  .qr-error,
+  .qr-image-container {
+    width: 160px;
+    height: 160px;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
   }
 }
 </style>

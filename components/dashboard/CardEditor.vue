@@ -1,18 +1,19 @@
 <template>
-  <div class="space-y-6">
-    <!-- Personal Information -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="card-title">Personal Information</h2>
-        <p class="card-subtitle">Basic details for your business card</p>
-      </div>
+  <div class="card-editor">
+    <form @submit.prevent="handleSubmit" class="space-y-6">
       
-      <form @submit.prevent="handleSave" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Personal Information Section -->
+      <div class="editor-section">
+        <div class="section-header">
+          <h2 class="section-title">Personal Information</h2>
+          <p class="section-subtitle">Basic details for your business card</p>
+        </div>
+        
+        <div class="form-grid">
           <!-- First Name -->
-          <div>
+          <div class="form-group">
             <label for="first_name" class="form-label">
-              First Name <span class="text-red-500">*</span>
+              First Name <span class="required">*</span>
             </label>
             <input
               id="first_name"
@@ -23,12 +24,15 @@
               required
               :disabled="isLoading"
             />
+            <div v-if="errors.first_name" class="form-error">
+              {{ errors.first_name }}
+            </div>
           </div>
 
           <!-- Last Name -->
-          <div>
+          <div class="form-group">
             <label for="last_name" class="form-label">
-              Last Name <span class="text-red-500">*</span>
+              Last Name <span class="required">*</span>
             </label>
             <input
               id="last_name"
@@ -39,13 +43,16 @@
               required
               :disabled="isLoading"
             />
+            <div v-if="errors.last_name" class="form-error">
+              {{ errors.last_name }}
+            </div>
           </div>
         </div>
 
         <!-- Company -->
-        <div>
+        <div class="form-group">
           <label for="company" class="form-label">
-            Company <span class="text-red-500">*</span>
+            Company <span class="required">*</span>
           </label>
           <input
             id="company"
@@ -56,10 +63,13 @@
             required
             :disabled="isLoading"
           />
+          <div v-if="errors.company" class="form-error">
+            {{ errors.company }}
+          </div>
         </div>
 
-        <!-- Title -->
-        <div>
+        <!-- Job Title -->
+        <div class="form-group">
           <label for="title" class="form-label">Job Title</label>
           <input
             id="title"
@@ -71,8 +81,8 @@
           />
         </div>
 
-        <!-- Note -->
-        <div>
+        <!-- About -->
+        <div class="form-group">
           <label for="note" class="form-label">About</label>
           <textarea
             id="note"
@@ -82,22 +92,22 @@
             placeholder="Brief description about yourself or your role"
             :disabled="isLoading"
           ></textarea>
-          <p class="form-helper">Optional short description (max 200 characters)</p>
+          <div class="form-helper">
+            Optional short description (max 200 characters)
+          </div>
         </div>
-      </form>
-    </div>
-
-    <!-- Contact Information -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="card-title">Contact Information</h2>
-        <p class="card-subtitle">How people can reach you</p>
       </div>
-      
-      <div class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Mobile -->
-          <div>
+
+      <!-- Contact Information Section -->
+      <div class="editor-section">
+        <div class="section-header">
+          <h2 class="section-title">Contact Information</h2>
+          <p class="section-subtitle">How people can reach you</p>
+        </div>
+        
+        <div class="form-grid">
+          <!-- Mobile Phone -->
+          <div class="form-group">
             <label for="mobile" class="form-label">Mobile Phone</label>
             <input
               id="mobile"
@@ -107,10 +117,13 @@
               placeholder="+1 (555) 123-4567"
               :disabled="isLoading"
             />
+            <div v-if="errors.mobile" class="form-error">
+              {{ errors.mobile }}
+            </div>
           </div>
 
-          <!-- Office -->
-          <div>
+          <!-- Office Phone -->
+          <div class="form-group">
             <label for="office" class="form-label">Office Phone</label>
             <input
               id="office"
@@ -120,11 +133,14 @@
               placeholder="+1 (555) 987-6543"
               :disabled="isLoading"
             />
+            <div v-if="errors.office" class="form-error">
+              {{ errors.office }}
+            </div>
           </div>
         </div>
 
         <!-- Email -->
-        <div>
+        <div class="form-group">
           <label for="email" class="form-label">Email Address</label>
           <input
             id="email"
@@ -134,10 +150,13 @@
             placeholder="john.doe@company.com"
             :disabled="isLoading"
           />
+          <div v-if="errors.email" class="form-error">
+            {{ errors.email }}
+          </div>
         </div>
 
         <!-- Website -->
-        <div>
+        <div class="form-group">
           <label for="website" class="form-label">Website</label>
           <input
             id="website"
@@ -147,10 +166,13 @@
             placeholder="https://company.com"
             :disabled="isLoading"
           />
+          <div v-if="errors.website" class="form-error">
+            {{ errors.website }}
+          </div>
         </div>
 
         <!-- Calendar -->
-        <div>
+        <div class="form-group">
           <label for="calendar" class="form-label">Calendar Link</label>
           <input
             id="calendar"
@@ -160,59 +182,51 @@
             placeholder="https://cal.com/johndoe"
             :disabled="isLoading"
           />
-          <p class="form-helper">Link to your booking page (Calendly, Cal.com, etc.)</p>
+          <div class="form-helper">
+            Link to your booking page (Calendly, Cal.com, etc.)
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Profile Image -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="card-title">Profile Image</h2>
-        <p class="card-subtitle">Upload your professional photo</p>
+      <!-- Profile Image Section -->
+      <div class="editor-section">
+        <div class="section-header">
+          <h2 class="section-title">Profile Image</h2>
+          <p class="section-subtitle">Upload your professional photo</p>
+        </div>
+        
+        <ImageUpload 
+          :current-image="cardData.profile_image"
+          @upload="handleImageUpload"
+          :disabled="isLoading"
+        />
       </div>
-      
-      <ImageUpload 
-        :current-image="cardData.profile_image"
-        @upload="handleImageUpload"
-        :disabled="isLoading"
-      />
-    </div>
 
-    <!-- Theme Customization -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="card-title">Theme Colors</h2>
-        <p class="card-subtitle">Customize your card's appearance</p>
+      <!-- Theme Section -->
+      <div class="editor-section">
+        <div class="section-header">
+          <h2 class="section-title">Theme Colors</h2>
+          <p class="section-subtitle">Customize your card's appearance</p>
+        </div>
+        
+        <ThemeCustomizer />
       </div>
-      
-      <ThemeCustomizer />
-    </div>
 
-    <!-- Validation Errors -->
-    <div v-if="validationErrors.length > 0" class="card border-red-200">
-      <div class="card-header">
-        <h3 class="text-red-700 font-semibold">Please fix the following errors:</h3>
+      <!-- Submit Button -->
+      <div class="submit-section">
+        <button
+          type="submit"
+          class="submit-btn"
+          :disabled="isLoading || !isFormValid"
+        >
+          <span v-if="isLoading" class="spinner"></span>
+          {{ isLoading ? 'Saving...' : 'Save Card' }}
+        </button>
       </div>
-      <ul class="list-disc list-inside space-y-1 text-red-600 text-sm">
-        <li v-for="error in validationErrors" :key="error">{{ error }}</li>
-      </ul>
-    </div>
-
-    <!-- Save Button -->
-    <div class="flex justify-end">
-      <button
-        @click="handleSave"
-        class="btn btn-primary"
-        :disabled="isLoading || !isFormValid"
-      >
-        <span v-if="isLoading" class="spinner mr-2"></span>
-        {{ isLoading ? 'Saving...' : 'Save Card' }}
-      </button>
-    </div>
+    </form>
 
     <!-- Auto-save indicator -->
-    <div v-if="autoSaving" class="fixed bottom-4 left-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
+    <div v-if="autoSaving" class="auto-save-indicator">
       Auto-saving...
     </div>
   </div>
@@ -220,8 +234,8 @@
 
 <script setup>
 /**
- * Card editor component for dashboard
- * Handles all card information editing with validation
+ * Card Editor component - Clean implementation
+ * Handles card data editing with validation and auto-save
  */
 
 // Props
@@ -239,10 +253,10 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['save', 'image-upload'])
 
-// Use card validation
+// Composables
 const { validateCard } = useCard()
 
-// Form data - reactive copy of card data
+// Form data
 const formData = ref({
   first_name: '',
   last_name: '',
@@ -256,13 +270,12 @@ const formData = ref({
   calendar: ''
 })
 
-// Auto-save state
+// State
+const errors = ref({})
 const autoSaving = ref(false)
+let saveTimeout = null
 
-// Validation state
-const validationErrors = ref([])
-
-// Watch for card data changes and update form
+// Watch for card data changes
 watch(() => props.cardData, (newData) => {
   Object.keys(formData.value).forEach(key => {
     if (newData[key] !== undefined) {
@@ -274,37 +287,17 @@ watch(() => props.cardData, (newData) => {
 // Computed properties
 const isFormValid = computed(() => {
   const validation = validateCard(formData.value)
-  validationErrors.value = Object.values(validation.errors)
+  errors.value = validation.errors
   return validation.isValid
 })
 
 /**
- * Handle form save
+ * Handle form submission
  */
-const handleSave = () => {
-  if (!isFormValid.value) {
-    return
-  }
+const handleSubmit = () => {
+  if (!isFormValid.value) return
   
-  // Clean up data before saving
-  const cleanData = { ...formData.value }
-  
-  // Trim whitespace
-  Object.keys(cleanData).forEach(key => {
-    if (typeof cleanData[key] === 'string') {
-      cleanData[key] = cleanData[key].trim()
-    }
-  })
-  
-  // Format URLs
-  if (cleanData.website && !cleanData.website.startsWith('http')) {
-    cleanData.website = `https://${cleanData.website}`
-  }
-  
-  if (cleanData.calendar && !cleanData.calendar.startsWith('http')) {
-    cleanData.calendar = `https://${cleanData.calendar}`
-  }
-  
+  const cleanData = cleanFormData(formData.value)
   emit('save', cleanData)
 }
 
@@ -315,8 +308,32 @@ const handleImageUpload = (file) => {
   emit('image-upload', file)
 }
 
-// Auto-save on form changes (debounced with longer delay)
-let saveTimeout = null
+/**
+ * Clean form data before submission
+ */
+const cleanFormData = (data) => {
+  const cleaned = { ...data }
+  
+  // Trim whitespace
+  Object.keys(cleaned).forEach(key => {
+    if (typeof cleaned[key] === 'string') {
+      cleaned[key] = cleaned[key].trim()
+    }
+  })
+  
+  // Format URLs
+  if (cleaned.website && !cleaned.website.startsWith('http')) {
+    cleaned.website = `https://${cleaned.website}`
+  }
+  
+  if (cleaned.calendar && !cleaned.calendar.startsWith('http')) {
+    cleaned.calendar = `https://${cleaned.calendar}`
+  }
+  
+  return cleaned
+}
+
+// Auto-save functionality
 watch(formData, () => {
   if (!isFormValid.value) return
   
@@ -324,18 +341,142 @@ watch(formData, () => {
   autoSaving.value = true
   
   saveTimeout = setTimeout(() => {
-    handleSave()
+    handleSubmit()
     autoSaving.value = false
-  }, 8000) // Increased from 2 seconds to 8 seconds
+  }, 3000) // Auto-save after 3 seconds of inactivity
 }, { deep: true })
 
-// Clear auto-saving indicator when component unmounts
+// Clean up on unmount
 onUnmounted(() => {
   clearTimeout(saveTimeout)
 })
 </script>
 
 <style scoped>
+/* Main container */
+.card-editor {
+  position: relative;
+}
+
+/* Editor sections */
+.editor-section {
+  background-color: var(--color-surface-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-content-primary);
+  margin-bottom: 0.5rem;
+}
+
+.section-subtitle {
+  font-size: 0.875rem;
+  color: var(--color-content-secondary);
+}
+
+/* Form styling */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-content-primary);
+  margin-bottom: 0.5rem;
+}
+
+.required {
+  color: var(--color-error);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 0.375rem;
+  background-color: var(--color-surface-primary);
+  color: var(--color-content-primary);
+  transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-input::placeholder {
+  color: var(--color-content-tertiary);
+}
+
+.form-error {
+  color: var(--color-error);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.form-helper {
+  color: var(--color-content-secondary);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Submit section */
+.submit-section {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+.submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: var(--color-primary-darker);
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .spinner {
   width: 16px;
   height: 16px;
@@ -343,6 +484,7 @@ onUnmounted(() => {
   border-top: 2px solid white;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin-right: 0.5rem;
 }
 
 @keyframes spin {
@@ -350,38 +492,42 @@ onUnmounted(() => {
   100% { transform: rotate(360deg); }
 }
 
-.form-input {
-  transition: border-color 0.2s ease;
+/* Auto-save indicator */
+.auto-save-indicator {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  background-color: var(--color-primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  animation: fadeIn 0.2s ease-out;
 }
 
-.form-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary);
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn:disabled:hover {
-  transform: none;
-}
-
-/* Required field styling */
-.text-red-500 {
-  color: #ef4444;
-}
-
-.text-red-600 {
-  color: #dc2626;
-}
-
-.text-red-700 {
-  color: #b91c1c;
-}
-
-.border-red-200 {
-  border-color: #fecaca;
+/* Responsive design */
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .editor-section {
+    padding: 1rem;
+  }
+  
+  .submit-section {
+    justify-content: stretch;
+  }
+  
+  .submit-btn {
+    width: 100%;
+  }
 }
 </style>

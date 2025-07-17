@@ -1,46 +1,30 @@
 <template>
-  <div class="card-page">
-    
+  <div class="public-card-page">
     <!-- Loading state -->
-    <div v-if="pending" class="min-h-[60vh] flex items-center justify-center">
-      <div class="text-center">
-        <div class="spinner mx-auto mb-4"></div>
-        <p :style="{ color: 'var(--color-content-secondary)' }">
-          Loading business card...
-        </p>
-      </div>
+    <div v-if="pending" class="loading-state">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading business card...</p>
     </div>
 
-    <!-- Error state (card not found) -->
-    <div v-else-if="error || !cardData" class="min-h-[60vh] flex items-center justify-center">
-      <div class="text-center max-w-md mx-auto px-4">
-        <div class="error-icon mx-auto mb-6" 
-             :style="{ 
-               color: 'var(--color-warning)',
-               backgroundColor: 'var(--color-warning)' + '15'
-             }">
-          <MagnifyingGlassIcon class="w-12 h-12" />
-        </div>
-        <h1 class="text-2xl font-bold mb-4" 
-            :style="{ color: 'var(--color-content-primary)' }">
-          Card Not Found
-        </h1>
-        <p class="text-base mb-8" 
-           :style="{ color: 'var(--color-content-secondary)' }">
-          The business card you're looking for doesn't exist or may have been moved.
-        </p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <NuxtLink to="/" class="btn btn-primary">
-            Visit Hivecard
-          </NuxtLink>
-        </div>
+    <!-- Error state -->
+    <div v-else-if="error || !cardData" class="error-state">
+      <div class="error-icon">
+        <MagnifyingGlassIcon class="w-12 h-12" />
+      </div>
+      <h1 class="error-title">Card Not Found</h1>
+      <p class="error-message">
+        The business card you're looking for doesn't exist or may have been moved.
+      </p>
+      <div class="error-actions">
+        <NuxtLink to="/" class="btn btn-primary">
+          Visit Hivecard
+        </NuxtLink>
       </div>
     </div>
 
     <!-- Card content -->
     <div v-else class="card-content">
-      <!-- Main card content -->
-      <div class="py-8">
+      <div class="card-container">
         <BusinessCard 
           :card="cardData" 
           @show-qr="showQRModal = true" 
@@ -51,19 +35,15 @@
       <QRCodeModal 
         :show="showQRModal"
         :card-url="cardShareUrl"
-        :card-title="`${cardData.first_name} ${cardData.last_name} - ${cardData.company}`"
+        :card-title="cardTitle"
         @close="showQRModal = false"
       />
       
-      <!-- Powered by Hivecard -->
-      <div class="text-center py-8 border-t" 
-           :style="{ borderColor: 'var(--color-border-primary)' }">
-        <p class="text-sm" 
-           :style="{ color: 'var(--color-content-tertiary)' }">
+      <!-- Powered by footer -->
+      <div class="powered-by">
+        <p class="powered-text">
           Powered by 
-          <NuxtLink to="/" 
-                    class="font-medium hover:underline"
-                    :style="{ color: 'var(--color-primary)' }">
+          <NuxtLink to="/" class="powered-link">
             Hivecard
           </NuxtLink>
         </p>
@@ -74,8 +54,8 @@
 
 <script setup>
 /**
- * Public business card page - Secure version using public_profiles
- * Displays a single user's business card accessible to anyone
+ * Public business card page - Clean implementation
+ * Displays a user's business card accessible to anyone
  */
 
 // Define layout
@@ -83,85 +63,27 @@ definePageMeta({
   layout: 'card'
 })
 
-// Import Heroicons
-import {
-  MagnifyingGlassIcon
-} from '@heroicons/vue/24/outline'
+// Import icons
+import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 
-// Use composables
+// Composables
+const { getCardByUsername, getCardShareUrl } = useCard()
 const { loadColorsFromCard } = useTheme()
 const route = useRoute()
 
 // Get username from route
 const username = route.params.username
 
-// Modal state
+// State
 const showQRModal = ref(false)
-
-/**
- * Fetch public card using the secure public_profiles collection
- * This function works on both client and server
- */
-const fetchPublicCard = async (username) => {
-  try {
-    console.log('Fetching public card for username:', username)
-    
-    // Create a fresh Pocketbase client for this request
-    // This ensures it works on both client and server
-    const config = useRuntimeConfig()
-    
-    // Use $fetch for SSR-compatible requests
-    const response = await $fetch(`${config.public.pocketbaseUrl}/api/collections/public_profiles/records`, {
-      query: {
-        filter: `username="${username}" && is_active=true`,
-        perPage: 1
-      }
-    })
-    
-    if (!response.items || response.items.length === 0) {
-      console.log('No public profile found for username:', username)
-      return null
-    }
-    
-    const profile = response.items[0]
-    console.log('Found public profile:', profile.id)
-    
-    // Add mock expand for compatibility with BusinessCard component
-    profile.expand = {
-      user_id: {
-        username: profile.username
-      }
-    }
-    
-    // Set the collection name for proper image URL generation
-    profile.collectionName = 'public_profiles'
-    
-    return profile
-    
-  } catch (err) {
-    console.error('Error fetching public card:', err)
-    return null
-  }
-}
 
 // Fetch card data with SSR support
 const { data: cardData, pending, error } = await useLazyAsyncData(
-  `public-card-${username}`,
-  () => fetchPublicCard(username),
+  `card-${username}`,
+  () => getCardByUsername(username),
   {
     default: () => null,
-    server: true, // Enable SSR
-    transform: (data) => {
-      // Ensure we have proper data structure
-      if (data && !data.expand) {
-        data.expand = {
-          user_id: {
-            username: data.username || username
-          }
-        }
-      }
-      return data
-    }
+    server: true
   }
 )
 
@@ -170,6 +92,12 @@ const cardShareUrl = computed(() => {
   if (!cardData.value) return ''
   const config = useRuntimeConfig()
   return `${config.public.siteUrl}/users/${username}`
+})
+
+const cardTitle = computed(() => {
+  if (!cardData.value) return 'Business Card'
+  const name = `${cardData.value.first_name} ${cardData.value.last_name}`.trim()
+  return `${name} - ${cardData.value.company || 'Business Card'}`
 })
 
 // Handle 404 for unknown cards
@@ -197,92 +125,32 @@ watchEffect(() => {
     useSeoMeta({
       title: `${displayName} - ${cardData.value.title || 'Professional'} | Hivecard`,
       description: description,
-      keywords: `${displayName}, ${cardData.value.company}, business card, contact, ${cardData.value.title || 'professional'}`,
       ogTitle: `${displayName} - Digital Business Card`,
       ogDescription: description,
       ogType: 'profile',
-      ogUrl: cardShareUrl.value,
-      ogImage: cardData.value.profile_image ? 
-        (typeof cardData.value.profile_image === 'string' ? cardData.value.profile_image : null) : 
-        null,
-      twitterCard: 'summary',
-      twitterTitle: `${displayName} - ${cardData.value.title || 'Professional'}`,
-      twitterDescription: description,
-      // Business card specific meta
-      'profile:first_name': cardData.value.first_name,
-      'profile:last_name': cardData.value.last_name,
-      'business:contact_data:company_name': cardData.value.company
-    })
-
-    // Add structured data for person
-    useHead({
-      script: [
-        {
-          type: 'application/ld+json',
-          children: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Person',
-            name: displayName,
-            jobTitle: cardData.value.title,
-            worksFor: cardData.value.company ? {
-              '@type': 'Organization',
-              name: cardData.value.company
-            } : undefined,
-            description: cardData.value.note,
-            contactPoint: [
-              cardData.value.email && {
-                '@type': 'ContactPoint',
-                contactType: 'email',
-                email: cardData.value.email
-              },
-              cardData.value.mobile && {
-                '@type': 'ContactPoint',
-                contactType: 'mobile',
-                telephone: cardData.value.mobile
-              },
-              cardData.value.office && {
-                '@type': 'ContactPoint',
-                contactType: 'work',
-                telephone: cardData.value.office
-              }
-            ].filter(Boolean),
-            url: cardData.value.website,
-            sameAs: [
-              cardData.value.website,
-              cardData.value.calendar
-            ].filter(Boolean)
-          })
-        }
-      ]
+      ogUrl: cardShareUrl.value
     })
   }
-})
-
-// Add specific meta tags for better card preview
-useHead({
-  meta: [
-    { name: 'robots', content: 'index, follow' },
-    { name: 'viewport', content: 'width=device-width, initial-scale=1' }
-  ]
 })
 </script>
 
 <style scoped>
-.container {
-  max-width: 1280px;
-}
-
-.card-page {
-  min-height: calc(100vh - 200px); /* Account for layout header/footer */
-}
-
-.error-icon {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
+/* Main container */
+.public-card-page {
+  min-height: calc(100vh - 200px);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+/* Loading state */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .spinner {
@@ -292,6 +160,7 @@ useHead({
   border-top: 3px solid var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
 }
 
 @keyframes spin {
@@ -299,20 +168,60 @@ useHead({
   100% { transform: rotate(360deg); }
 }
 
-.btn {
-  transition: all 0.2s ease;
+.loading-text {
+  color: var(--color-content-secondary);
 }
 
-.btn:hover {
-  transform: translateY(-1px);
+/* Error state */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 400px;
 }
 
-.btn-primary:hover {
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+.error-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--color-warning);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
 }
 
-/* Smooth card loading animation */
+.error-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-content-primary);
+  margin-bottom: 1rem;
+}
+
+.error-message {
+  color: var(--color-content-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.error-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Card content */
 .card-content {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.card-container {
+  width: 100%;
   animation: fadeIn 0.5s ease-out;
 }
 
@@ -324,6 +233,70 @@ useHead({
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Powered by footer */
+.powered-by {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border-primary);
+  text-align: center;
+}
+
+.powered-text {
+  font-size: 0.875rem;
+  color: var(--color-content-tertiary);
+}
+
+.powered-link {
+  color: var(--color-primary);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.powered-link:hover {
+  color: var(--color-primary-darker);
+  text-decoration: underline;
+}
+
+/* Button styling */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-darker);
+  transform: translateY(-1px);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .public-card-page {
+    padding: 1rem;
+  }
+  
+  .error-state {
+    max-width: 300px;
+  }
+  
+  .error-title {
+    font-size: 1.25rem;
   }
 }
 </style>

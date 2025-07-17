@@ -1,34 +1,25 @@
 /**
- * Authentication middleware - Clean version
+ * Authentication middleware - Clean implementation
  * Protects routes that require authentication
  */
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
-  // Only run on client side after hydration
+  // Only run on client side
   if (import.meta.server) return
   
-  const { isAuthenticated, pb, refreshAuth } = usePocketbase()
+  const { isAuthenticated, refreshAuth } = usePocketbase()
   
-  console.log('Auth middleware checking:', {
-    route: to.path,
-    isAuthenticated: isAuthenticated.value,
-    hasPb: !!pb
-  })
-  
-  // If we have a Pocketbase client, try to refresh auth if needed
-  if (pb && pb.authStore.isValid) {
+  // Try to refresh auth if needed
+  if (!isAuthenticated.value) {
     try {
       await refreshAuth()
     } catch (error) {
-      console.warn('Auth refresh failed in middleware:', error)
+      // Refresh failed, proceed with redirect
     }
   }
   
-  // Check authentication after potential refresh
+  // Check authentication status
   if (!isAuthenticated.value) {
-    console.log('User not authenticated, redirecting to login')
     return navigateTo('/login')
   }
-  
-  console.log('User authenticated, allowing access to:', to.path)
 })

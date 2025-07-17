@@ -1,75 +1,78 @@
 /**
- * Pocketbase composable for consistent API access - Lifecycle Safe
- * Provides reactive access to Pocketbase client and auth state
+ * PocketBase composable - Fixed SSR hydration issues
+ * Handles authentication with proper client-side initialization
  */
 
-// Global reactive auth state that persists across page loads
+import { ref, computed, readonly } from 'vue'
+
+// Global state for auth persistence
 const globalUser = ref(null)
-const globalAuthState = ref(false)
-let isInitialized = false
+const globalAuthValid = ref(false)
+const isClientReady = ref(false)
 
 export const usePocketbase = () => {
-  // Get Nuxt app context safely
+  // Get PocketBase client from Nuxt plugin (client-side only)
   const nuxtApp = useNuxtApp()
+  const pb = import.meta.client ? nuxtApp.$pb : null
   
-  // Check if we're on client side and have the plugin
-  const pb = import.meta.client && nuxtApp.$pb ? nuxtApp.$pb : null
-  
-  // Use global state for auth persistence
+  // Reactive auth state
   const user = globalUser
-  const isAuthenticated = computed(() => globalAuthState.value && globalUser.value !== null)
+  const isAuthenticated = computed(() => {
+    // Only return true if we're on client and have valid auth
+    return import.meta.client && globalAuthValid.value && globalUser.value !== null
+  })
   
-  // Initialize auth state from Pocketbase on client (only once)
-  if (import.meta.client && pb && !isInitialized) {
-    isInitialized = true
-    
-    // Set initial state from Pocketbase auth store
-    globalUser.value = pb.authStore.model
-    globalAuthState.value = pb.authStore.isValid
-    
-    console.log('Initializing global auth state:', {
-      hasUser: !!globalUser.value,
-      isValid: globalAuthState.value,
-      username: globalUser.value?.username
-    })
-    
-    // Listen for auth changes and update global state
-    pb.authStore.onChange((token, model) => {
-      console.log('Auth store changed, updating global state:', {
-        hasToken: !!token,
-        hasModel: !!model,
-        username: model?.username
+  /**
+   * Initialize auth state (client-side only)
+   */
+  const initializeAuth = () => {
+    if (import.meta.client && pb && !isClientReady.value) {
+      console.log('Initializing PocketBase auth state')
+      
+      // Set initial state from PocketBase auth store
+      globalUser.value = pb.authStore.model
+      globalAuthValid.value = pb.authStore.isValid
+      isClientReady.value = true
+      
+      console.log('Auth state initialized:', {
+        hasUser: !!globalUser.value,
+        isValid: globalAuthValid.value
       })
       
-      globalUser.value = model
-      globalAuthState.value = pb.authStore.isValid
-    })
+      // Listen for auth changes
+      pb.authStore.onChange((token, model) => {
+        console.log('Auth state changed:', {
+          hasToken: !!token,
+          hasModel: !!model
+        })
+        
+        globalUser.value = model
+        globalAuthValid.value = pb.authStore.isValid
+      })
+      
+      // Try to refresh auth if valid
+      if (pb.authStore.isValid) {
+        pb.collection('users').authRefresh().catch((error) => {
+          console.warn('Auth refresh failed:', error)
+          pb.authStore.clear()
+        })
+      }
+    }
   }
   
   /**
-   * Login with email and password
+   * Login user with email and password
    * @param {string} email - User email
    * @param {string} password - User password
-   * @returns {Promise<Object>} User data
+   * @returns {Promise<Object>} Auth record
    */
   const login = async (email, password) => {
-    if (!pb) {
-      throw new Error('Pocketbase client not available')
-    }
+    if (!pb) throw new Error('PocketBase client not available')
     
     try {
-      console.log('Attempting login for:', email)
+      console.log('Logging in user:', email)
       const authData = await pb.collection('users').authWithPassword(email, password)
-      
-      // Update global state
-      globalUser.value = authData.record
-      globalAuthState.value = true
-      
-      console.log('Login successful:', {
-        username: authData.record.username,
-        id: authData.record.id
-      })
-      
+      console.log('Login successful')
       return authData.record
     } catch (error) {
       console.error('Login failed:', error)
@@ -78,33 +81,22 @@ export const usePocketbase = () => {
   }
   
   /**
-   * Register a new user
+   * Register new user
    * @param {Object} userData - User registration data
-   * @returns {Promise<Object>} User data
+   * @returns {Promise<Object>} Auth record
    */
   const register = async (userData) => {
-    if (!pb) {
-      throw new Error('Pocketbase client not available')
-    }
+    if (!pb) throw new Error('PocketBase client not available')
     
     try {
-      console.log('Attempting registration for:', userData.username)
+      console.log('Registering user:', userData.username)
       
-      // Create the user
-      const record = await pb.collection('users').create(userData)
+      // Create user
+      await pb.collection('users').create(userData)
       
       // Auto-login after registration
       const authData = await pb.collection('users').authWithPassword(userData.email, userData.password)
-      
-      // Update global state
-      globalUser.value = authData.record
-      globalAuthState.value = true
-      
-      console.log('Registration and login successful:', {
-        username: authData.record.username,
-        id: authData.record.id
-      })
-      
+      console.log('Registration and login successful')
       return authData.record
     } catch (error) {
       console.error('Registration failed:', error)
@@ -118,84 +110,50 @@ export const usePocketbase = () => {
   const logout = () => {
     if (!pb) return
     
-    console.log('Logging out user:', globalUser.value?.username)
-    
+    console.log('Logging out user')
     pb.authStore.clear()
     
-    // Clear global state
-    globalUser.value = null
-    globalAuthState.value = false
-    
-    // Navigate to login only on client
+    // Navigate to login if on client
     if (import.meta.client) {
       navigateTo('/login')
     }
   }
   
   /**
-   * Get current user data
-   * @returns {Object|null} Current user or null
-   */
-  const getCurrentUser = () => {
-    if (!pb) return globalUser.value
-    return pb.authStore.model || globalUser.value
-  }
-  
-  /**
-   * Check if user is authenticated
-   * @returns {boolean} Authentication status
-   */
-  const checkAuth = () => {
-    if (!pb) return globalAuthState.value
-    return pb.authStore.isValid
-  }
-  
-  /**
-   * Refresh authentication
+   * Refresh authentication token
    * @returns {Promise<boolean>} Success status
    */
   const refreshAuth = async () => {
-    if (!pb) return false
+    if (!pb || !pb.authStore.isValid) return false
     
     try {
-      if (pb.authStore.isValid) {
-        console.log('Refreshing auth token...')
-        await pb.collection('users').authRefresh()
-        
-        // Update global state
-        globalUser.value = pb.authStore.model
-        globalAuthState.value = pb.authStore.isValid
-        
-        console.log('Auth refresh successful')
-        return true
-      }
-      return false
+      console.log('Refreshing auth token')
+      await pb.collection('users').authRefresh()
+      return true
     } catch (error) {
-      console.error('Auth refresh failed:', error)
-      
-      // Clear invalid auth
+      console.warn('Auth refresh failed:', error)
       pb.authStore.clear()
-      globalUser.value = null
-      globalAuthState.value = false
-      
       return false
     }
   }
   
+  // Initialize auth when composable is used
+  if (import.meta.client) {
+    initializeAuth()
+  }
+  
   return {
-    // Pocketbase client (can be null on server)
+    // Client and state
     pb,
-    
-    // Reactive state (global, persists across page loads)
     user: readonly(user),
     isAuthenticated,
+    isClientReady: readonly(isClientReady),
     
-    // Authentication methods
+    // Auth methods
     login,
     register,
     logout,
-    getCurrentUser,
-    checkAuth,
-    refreshAuth
+    refreshAuth,
+    initializeAuth
   }
 }

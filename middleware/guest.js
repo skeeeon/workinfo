@@ -1,24 +1,16 @@
 /**
- * Guest middleware - Clean version
+ * Guest middleware - Clean implementation
  * Redirects authenticated users away from auth pages
  */
 
 export default defineNuxtRouteMiddleware((to, from) => {
-  // Only run on client side after hydration
+  // Only run on client side
   if (import.meta.server) return
   
   const { isAuthenticated } = usePocketbase()
   
-  console.log('Guest middleware checking:', {
-    route: to.path,
-    isAuthenticated: isAuthenticated.value
-  })
-  
   // If authenticated, redirect to dashboard
   if (isAuthenticated.value) {
-    console.log('User is authenticated, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
-  
-  console.log('User not authenticated, allowing access to:', to.path)
 })

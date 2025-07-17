@@ -1,12 +1,14 @@
 /**
- * Authentication composable
- * Handles user authentication flows and validation
+ * Authentication composable - Clean implementation
+ * Handles user authentication with proper validation
  */
 
+import { ref, readonly } from 'vue'
+
 export const useAuth = () => {
-  const { login, register, logout, user, isAuthenticated, pb } = usePocketbase()
+  const { login, register, logout, user, isAuthenticated } = usePocketbase()
   
-  // Loading states
+  // Loading and error state
   const isLoading = ref(false)
   const error = ref(null)
   
@@ -23,13 +25,14 @@ export const useAuth = () => {
     
     try {
       // Validate input
-      if (!credentials.email || !credentials.password) {
+      if (!credentials.email?.trim() || !credentials.password?.trim()) {
         throw new Error('Email and password are required')
       }
       
+      // Perform login
       await login(credentials.email, credentials.password)
       
-      // Redirect to dashboard after successful login
+      // Navigate to dashboard on success
       await navigateTo('/dashboard')
       return true
       
@@ -44,10 +47,6 @@ export const useAuth = () => {
   /**
    * Register new user with validation
    * @param {Object} userData - Registration data
-   * @param {string} userData.email - User email
-   * @param {string} userData.password - User password
-   * @param {string} userData.passwordConfirm - Password confirmation
-   * @param {string} userData.username - Unique username
    * @returns {Promise<boolean>} Success status
    */
   const registerUser = async (userData) => {
@@ -55,37 +54,42 @@ export const useAuth = () => {
     error.value = null
     
     try {
-      // Validate input
-      if (!userData.email || !userData.password || !userData.username) {
-        throw new Error('Email, password, and username are required')
+      // Validate required fields
+      const { email, password, passwordConfirm, username } = userData
+      
+      if (!email?.trim() || !password?.trim() || !username?.trim()) {
+        throw new Error('All fields are required')
       }
       
-      if (userData.password !== userData.passwordConfirm) {
+      if (password !== passwordConfirm) {
         throw new Error('Passwords do not match')
       }
       
-      if (userData.password.length < 8) {
-        throw new Error('Password must be at least 8 characters long')
+      if (password.length < 8) {
+        throw new Error('Password must be at least 8 characters')
       }
       
-      // Validate username format
-      if (!validateUsername(userData.username)) {
-        throw new Error('Username must be 3-20 characters, letters, numbers, and underscores only')
+      if (!isValidUsername(username)) {
+        throw new Error('Username must be 3-20 characters, alphanumeric and underscores only')
       }
       
-      // Try to register - Pocketbase will handle username uniqueness validation
+      if (!isValidEmail(email)) {
+        throw new Error('Invalid email format')
+      }
+      
+      // Perform registration
       await register(userData)
       
-      // Redirect to dashboard after successful registration
+      // Navigate to dashboard on success
       await navigateTo('/dashboard')
       return true
       
     } catch (err) {
-      // Handle specific Pocketbase errors
+      // Handle specific PocketBase errors
       if (err.message.includes('username')) {
-        error.value = 'Username is already taken. Please choose a different one.'
+        error.value = 'Username already taken'
       } else if (err.message.includes('email')) {
-        error.value = 'Email is already registered. Please use a different email or try logging in.'
+        error.value = 'Email already registered'
       } else {
         error.value = err.message
       }
@@ -93,19 +97,6 @@ export const useAuth = () => {
     } finally {
       isLoading.value = false
     }
-  }
-  
-  /**
-   * Check if username is available (simplified version)
-   * This now only validates format, not availability
-   * Actual availability is checked server-side during registration
-   * @param {string} username - Username to check
-   * @returns {Promise<boolean>} True if format is valid
-   */
-  const checkUsernameAvailability = async (username) => {
-    // Only validate format client-side
-    // Actual availability will be checked during registration
-    return validateUsername(username)
   }
   
   /**
@@ -117,7 +108,7 @@ export const useAuth = () => {
   }
   
   /**
-   * Clear any authentication errors
+   * Clear error state
    */
   const clearError = () => {
     error.value = null
@@ -126,9 +117,9 @@ export const useAuth = () => {
   /**
    * Validate email format
    * @param {string} email - Email to validate
-   * @returns {boolean} Valid email format
+   * @returns {boolean} Is valid email
    */
-  const validateEmail = (email) => {
+  const isValidEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     return emailRegex.test(email)
   }
@@ -136,10 +127,9 @@ export const useAuth = () => {
   /**
    * Validate username format
    * @param {string} username - Username to validate
-   * @returns {boolean} Valid username format
+   * @returns {boolean} Is valid username
    */
-  const validateUsername = (username) => {
-    // Username must be 3-20 characters, alphanumeric and underscores only
+  const isValidUsername = (username) => {
     const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/
     return usernameRegex.test(username)
   }
@@ -156,10 +146,9 @@ export const useAuth = () => {
     registerUser,
     logoutUser,
     clearError,
-    checkUsernameAvailability,
     
     // Validation
-    validateEmail,
-    validateUsername
+    isValidEmail,
+    isValidUsername
   }
 }

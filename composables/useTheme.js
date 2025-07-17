@@ -1,96 +1,85 @@
 /**
- * Theme management composable for Hivecard
- * Handles both system theme (light/dark) and custom brand colors
- * Based on 816tech theme system with custom color extensions
+ * Theme management composable - Clean implementation
+ * Handles light/dark mode and custom brand colors
  */
 
+import { ref, computed, watch, onMounted } from 'vue'
+
 export const useTheme = () => {
-  // System theme state
+  // Theme state
   const currentTheme = useState('theme', () => 'auto')
   const systemPrefersDark = ref(false)
-  
-  // Custom colors state
   const customColors = useState('customColors', () => ({
     primaryLight: '#2563eb',
     primaryDark: '#60a5fa'
   }))
   
-  /**
-   * Computed property to determine if dark mode is active
-   */
+  // Computed properties
   const isDarkMode = computed(() => {
     return currentTheme.value === 'dark' || 
-      (currentTheme.value === 'auto' && systemPrefersDark.value)
+           (currentTheme.value === 'auto' && systemPrefersDark.value)
   })
   
-  /**
-   * Get current primary color based on theme
-   */
   const currentPrimaryColor = computed(() => {
     return isDarkMode.value ? customColors.value.primaryDark : customColors.value.primaryLight
+  })
+  
+  const themeLabel = computed(() => {
+    switch (currentTheme.value) {
+      case 'light': return 'Light'
+      case 'dark': return 'Dark'
+      default: return 'Auto'
+    }
   })
   
   /**
    * Initialize theme system
    */
   const initTheme = () => {
-    if (import.meta.client) {
-      // Check system preference
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-      systemPrefersDark.value = mediaQuery.matches
-      
-      // Get saved theme from localStorage
-      const savedTheme = localStorage.getItem('hivecard-theme')
-      if (['dark', 'light', 'auto'].includes(savedTheme)) {
-        currentTheme.value = savedTheme
+    if (!import.meta.client) return
+    
+    // Check system preference
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    systemPrefersDark.value = mediaQuery.matches
+    
+    // Load saved theme
+    const savedTheme = localStorage.getItem('hivecard-theme')
+    if (['light', 'dark', 'auto'].includes(savedTheme)) {
+      currentTheme.value = savedTheme
+    }
+    
+    // Load saved colors
+    const savedColors = localStorage.getItem('hivecard-colors')
+    if (savedColors) {
+      try {
+        const parsed = JSON.parse(savedColors)
+        customColors.value = { ...customColors.value, ...parsed }
+      } catch (e) {
+        console.error('Failed to parse saved colors:', e)
       }
-      
-      // Load custom colors from localStorage
-      const savedColors = localStorage.getItem('hivecard-colors')
-      if (savedColors) {
-        try {
-          const parsed = JSON.parse(savedColors)
-          customColors.value = { ...customColors.value, ...parsed }
-        } catch (e) {
-          console.error('Failed to parse saved colors:', e)
-        }
-      }
-      
-      // Apply theme
-      applyTheme()
-      
-      // Listen for system preference changes
-      const updateSystemPreference = (e) => {
-        systemPrefersDark.value = e.matches
-        applyTheme()
-      }
-      
-      if (mediaQuery.addEventListener) {
-        mediaQuery.addEventListener('change', updateSystemPreference)
-      } else if (mediaQuery.addListener) {
-        mediaQuery.addListener(updateSystemPreference)
-      }
-      
-      // Clean up on unmount
-      onUnmounted(() => {
-        if (mediaQuery.removeEventListener) {
-          mediaQuery.removeEventListener('change', updateSystemPreference)
-        } else if (mediaQuery.removeListener) {
-          mediaQuery.removeListener(updateSystemPreference)
-        }
-      })
+    }
+    
+    // Apply theme
+    applyTheme()
+    
+    // Listen for system changes
+    const handleSystemChange = (e) => {
+      systemPrefersDark.value = e.matches
+    }
+    
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleSystemChange)
+    } else {
+      mediaQuery.addListener(handleSystemChange)
     }
   }
   
   /**
-   * Set the theme mode
-   * @param {string} theme - Theme mode: 'light', 'dark', or 'auto'
+   * Set theme mode
+   * @param {string} theme - Theme mode ('light', 'dark', 'auto')
    */
   const setTheme = (theme) => {
-    if (!['light', 'dark', 'auto'].includes(theme)) {
-      console.warn(`Invalid theme: ${theme}`)
-      return
-    }
+    if (!['light', 'dark', 'auto'].includes(theme)) return
     
     currentTheme.value = theme
     saveTheme()
@@ -98,7 +87,7 @@ export const useTheme = () => {
   }
   
   /**
-   * Toggle between light, dark, and auto themes
+   * Toggle theme between light, dark, and auto
    */
   const toggleTheme = () => {
     if (currentTheme.value === 'light') {
@@ -113,13 +102,11 @@ export const useTheme = () => {
   /**
    * Set custom colors
    * @param {Object} colors - Color configuration
-   * @param {string} colors.primaryLight - Primary color for light mode
-   * @param {string} colors.primaryDark - Primary color for dark mode
    */
   const setCustomColors = (colors) => {
     customColors.value = {
       primaryLight: colors.primaryLight || customColors.value.primaryLight,
-      primaryDark: colors.primaryDark || colors.primaryLight || customColors.value.primaryDark
+      primaryDark: colors.primaryDark || customColors.value.primaryDark
     }
     saveCustomColors()
     applyTheme()
@@ -141,57 +128,28 @@ export const useTheme = () => {
    * Apply theme to document
    */
   const applyTheme = () => {
-    if (import.meta.client) {
-      const shouldBeDark = isDarkMode.value
-      
-      // Apply dark mode class
-      document.documentElement.classList.toggle('dark', shouldBeDark)
-      
-      // Apply custom colors as CSS variables
-      const root = document.documentElement
-      root.style.setProperty('--color-primary', currentPrimaryColor.value)
-      root.style.setProperty('--color-primary-light', customColors.value.primaryLight)
-      root.style.setProperty('--color-primary-dark', customColors.value.primaryDark)
-      
-      // Generate color variations
-      const primaryColor = currentPrimaryColor.value
-      const { light, dark } = generateColorVariations(primaryColor)
-      
-      root.style.setProperty('--color-primary-lighter', light)
-      root.style.setProperty('--color-primary-darker', dark)
-      
-      // Update theme-color meta tag
-      const themeColorMeta = document.querySelector('meta[name="theme-color"]')
-      if (themeColorMeta) {
-        themeColorMeta.content = shouldBeDark ? '#0f172a' : '#ffffff'
-      }
+    if (!import.meta.client) return
+    
+    const shouldBeDark = isDarkMode.value
+    const root = document.documentElement
+    
+    // Apply dark mode class
+    root.classList.toggle('dark', shouldBeDark)
+    
+    // Apply custom colors
+    root.style.setProperty('--color-primary', currentPrimaryColor.value)
+    root.style.setProperty('--color-primary-light', customColors.value.primaryLight)
+    root.style.setProperty('--color-primary-dark', customColors.value.primaryDark)
+    
+    // Update theme-color meta tag
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+    if (metaThemeColor) {
+      metaThemeColor.content = shouldBeDark ? '#0f172a' : '#ffffff'
     }
   }
   
   /**
-   * Generate color variations from base color
-   * @param {string} baseColor - Base color in hex format
-   * @returns {Object} Color variations
-   */
-  const generateColorVariations = (baseColor) => {
-    // Simple color variation generator
-    // In a real app, you might want to use a color library like chroma.js
-    const hex = baseColor.replace('#', '')
-    const r = parseInt(hex.substr(0, 2), 16)
-    const g = parseInt(hex.substr(2, 2), 16)
-    const b = parseInt(hex.substr(4, 2), 16)
-    
-    // Generate lighter version (add 20%)
-    const lighter = `rgb(${Math.min(255, r + 51)}, ${Math.min(255, g + 51)}, ${Math.min(255, b + 51)})`
-    
-    // Generate darker version (subtract 20%)
-    const darker = `rgb(${Math.max(0, r - 51)}, ${Math.max(0, g - 51)}, ${Math.max(0, b - 51)})`
-    
-    return { light: lighter, dark: darker }
-  }
-  
-  /**
-   * Save theme preference to localStorage
+   * Save theme to localStorage
    */
   const saveTheme = () => {
     if (import.meta.client) {
@@ -209,17 +167,6 @@ export const useTheme = () => {
   }
   
   /**
-   * Get theme label for UI
-   */
-  const themeLabel = computed(() => {
-    switch (currentTheme.value) {
-      case 'light': return 'Light'
-      case 'dark': return 'Dark'
-      default: return 'Auto'
-    }
-  })
-  
-  /**
    * Load colors from card data
    * @param {Object} cardData - Card data with theme colors
    */
@@ -234,7 +181,7 @@ export const useTheme = () => {
   
   /**
    * Get colors for saving to card
-   * @returns {Object} Color data for card
+   * @returns {Object} Color data
    */
   const getColorsForCard = () => {
     return {
@@ -244,8 +191,8 @@ export const useTheme = () => {
   }
   
   // Watch for theme changes
-  watch(isDarkMode, (newIsDark, oldIsDark) => {
-    if (import.meta.client && oldIsDark !== undefined && oldIsDark !== newIsDark) {
+  watch(isDarkMode, () => {
+    if (import.meta.client) {
       applyTheme()
     }
   })
@@ -259,12 +206,11 @@ export const useTheme = () => {
     // State
     currentTheme,
     isDarkMode,
-    systemPrefersDark,
-    customColors: readonly(customColors),
+    customColors,
     currentPrimaryColor,
     themeLabel,
     
-    // Theme methods
+    // Actions
     setTheme,
     toggleTheme,
     setCustomColors,
@@ -273,9 +219,6 @@ export const useTheme = () => {
     
     // Card integration
     loadColorsFromCard,
-    getColorsForCard,
-    
-    // Utilities
-    generateColorVariations
+    getColorsForCard
   }
 }

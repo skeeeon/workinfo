@@ -1,54 +1,40 @@
 <template>
-  <footer class="py-12 border-t" 
-          :style="{ 
-            backgroundColor: 'var(--color-surface-secondary)',
-            borderColor: 'var(--color-border-primary)'
-          }">
-    <div class="container mx-auto px-4">
-      <div class="text-center">
-        <div class="mb-6">
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
           <Logo />
-        </div>
-        
-        <p class="text-sm mb-6 max-w-md mx-auto" 
-           :style="{ color: 'var(--color-content-secondary)' }">
-          Digital business cards for modern professionals. 
-          Create, customize, and share your professional identity.
-        </p>
-        
-        <div class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-8 mb-6">
-          <NuxtLink to="/" 
-                    class="text-sm transition-colors"
-                    :style="{ color: 'var(--color-content-secondary)' }">
-            Home
-          </NuxtLink>
-          
-          <NuxtLink to="/privacy" 
-                    class="text-sm transition-colors"
-                    :style="{ color: 'var(--color-content-secondary)' }">
-            Privacy Policy
-          </NuxtLink>
-          
-          <NuxtLink to="/terms" 
-                    class="text-sm transition-colors"
-                    :style="{ color: 'var(--color-content-secondary)' }">
-            Terms of Service
-          </NuxtLink>
-          
-          <NuxtLink to="/contact" 
-                    class="text-sm transition-colors"
-                    :style="{ color: 'var(--color-content-secondary)' }">
-            Contact
-          </NuxtLink>
-        </div>
-        
-        <div class="pt-6 border-t" 
-             :style="{ borderColor: 'var(--color-border-primary)' }">
-          <p class="text-xs" 
-             :style="{ color: 'var(--color-content-tertiary)' }">
-            © {{ new Date().getFullYear() }} Hivecard. All rights reserved.
+          <p class="footer-description">
+            Digital business cards for modern professionals. 
+            Create, customize, and share your professional identity.
           </p>
         </div>
+        
+        <div class="footer-links">
+          <div class="link-group">
+            <h3 class="link-title">Product</h3>
+            <div class="links">
+              <NuxtLink to="/" class="footer-link">Home</NuxtLink>
+              <NuxtLink to="/register" class="footer-link">Sign Up</NuxtLink>
+              <NuxtLink to="/login" class="footer-link">Login</NuxtLink>
+            </div>
+          </div>
+          
+          <div class="link-group">
+            <h3 class="link-title">Legal</h3>
+            <div class="links">
+              <NuxtLink to="/privacy" class="footer-link">Privacy Policy</NuxtLink>
+              <NuxtLink to="/terms" class="footer-link">Terms of Service</NuxtLink>
+              <NuxtLink to="/contact" class="footer-link">Contact</NuxtLink>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p class="copyright">
+          © {{ new Date().getFullYear() }} Hivecard. All rights reserved.
+        </p>
       </div>
     </div>
   </footer>
@@ -56,20 +42,109 @@
 
 <script setup>
 /**
- * Footer component for Hivecard
- * Simple, clean footer with essential links
+ * Footer component - Fixed to only link to existing routes
  */
 </script>
 
 <style scoped>
-.container {
-  max-width: 1280px;
+.footer {
+  background-color: var(--color-surface-secondary);
+  border-top: 1px solid var(--color-border-primary);
+  padding: 3rem 0 1.5rem;
+  margin-top: auto;
 }
 
-/* Hover effects */
-a:hover {
-  color: var(--color-primary) !important;
-  transform: translateY(-1px);
-  transition: all 0.2s ease;
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  margin-bottom: 2rem;
+}
+
+.footer-brand {
+  max-width: 400px;
+}
+
+.footer-description {
+  color: var(--color-content-secondary);
+  margin-top: 1rem;
+  line-height: 1.6;
+}
+
+.footer-links {
+  display: flex;
+  gap: 2rem;
+  justify-content: flex-end;
+}
+
+.link-group {
+  min-width: 150px;
+}
+
+.link-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-content-primary);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footer-link {
+  color: var(--color-content-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: var(--color-primary);
+}
+
+.footer-bottom {
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border-primary);
+  text-align: center;
+}
+
+.copyright {
+  color: var(--color-content-tertiary);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .footer-links {
+    justify-content: flex-start;
+  }
+  
+  .link-group {
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer-links {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
 }
 </style>

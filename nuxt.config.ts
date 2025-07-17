@@ -13,25 +13,6 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt'
   ],
 
-  // PWA Configuration
-  pwa: {
-    registerType: 'autoUpdate',
-    workbox: {
-      navigateFallback: '/',
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}']
-    },
-    client: {
-      installPrompt: true,
-      periodicSyncForUpdates: 20
-    },
-    devOptions: {
-      enabled: true,
-      suppressWarnings: true,
-      navigateFallbackAllowlist: [/^\/$/],
-      type: 'module'
-    }
-  },
-
   // Component auto-imports
   components: [
     {
@@ -40,30 +21,24 @@ export default defineNuxtConfig({
     }
   ],
 
-  // Enhanced imports configuration
+  // Composables auto-import
   imports: {
-    dirs: [
-      'composables'
-    ]
+    dirs: ['composables']
   },
 
   // Google Fonts
   googleFonts: {
     families: {
-      Inter: [300, 400, 500, 600, 700]
+      Inter: [400, 500, 600, 700]
     },
     display: 'swap',
-    preload: true,
-    prefetch: true,
-    preconnect: true
+    preload: true
   },
 
   // CSS
-  css: [
-    '~/assets/css/main.css'
-  ],
+  css: ['~/assets/css/main.css'],
 
-  // Runtime config for environment variables
+  // Runtime config
   runtimeConfig: {
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
@@ -71,39 +46,56 @@ export default defineNuxtConfig({
     }
   },
 
-  // SEO Configuration
+  // PWA Configuration
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'Hivecard - Digital Business Cards',
+      short_name: 'Hivecard',
+      description: 'Create and share professional digital business cards',
+      theme_color: '#2563eb',
+      background_color: '#ffffff',
+      display: 'standalone',
+      start_url: '/',
+      icons: [
+        {
+          src: '/icon-192x192.png',
+          sizes: '192x192',
+          type: 'image/png'
+        },
+        {
+          src: '/icon-512x512.png',
+          sizes: '512x512',
+          type: 'image/png'
+        }
+      ]
+    },
+    workbox: {
+      navigateFallback: '/',
+      globPatterns: ['**/*.{js,css,html,png,svg,ico}']
+    }
+  },
+
+  // App configuration
   app: {
     head: {
-      title: 'Hivecard - Digital Business Cards for Modern Professionals',
+      title: 'Hivecard - Digital Business Cards',
       htmlAttrs: { lang: 'en' },
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Create and share digital business cards for Hive coworking space members.' },
-        { name: 'author', content: 'Hive Coworking' },
-        { name: 'robots', content: 'index, follow' },
-        { name: 'theme-color', content: '#2563eb', media: '(prefers-color-scheme: light)' },
-        { name: 'theme-color', content: '#0f172a', media: '(prefers-color-scheme: dark)' },
-        // PWA meta tags
-        { name: 'apple-mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
-        { name: 'apple-mobile-web-app-title', content: 'Hivecard' },
-        { name: 'msapplication-TileColor', content: '#2563eb' }
+        { name: 'description', content: 'Create and share professional digital business cards for modern professionals.' },
+        { name: 'theme-color', content: '#2563eb' }
       ],
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'manifest', href: '/manifest.json' },
-        // Apple touch icons
-        { rel: 'apple-touch-icon', href: '/icon-192x192.png' },
-        { rel: 'apple-touch-icon', sizes: '180x180', href: '/icon-192x192.png' }
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ]
     }
   },
 
-  // Tailwind CSS configuration
-  tailwindcss: {
-    exposeConfig: true,
-    viewer: true,
+  // TypeScript configuration
+  typescript: {
+    typeCheck: false
   },
 
   // Vite configuration
@@ -112,10 +104,5 @@ export default defineNuxtConfig({
       __VUE_OPTIONS_API__: true,
       __VUE_PROD_DEVTOOLS__: false
     }
-  },
-
-  // Disable TypeScript checking for development speed
-  typescript: {
-    typeCheck: false
   }
 })
