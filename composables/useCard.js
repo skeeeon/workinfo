@@ -1,5 +1,5 @@
 /**
- * Card management composable - Fixed image URL generation
+ * Card management composable - Fixed with username population
  * Handles business card CRUD operations with proper PocketBase URLs
  */
 
@@ -38,7 +38,7 @@ export const useCard = () => {
   
 
   /**
-   * Save card (create or update)
+   * Save card (create or update) - FIXED: Now includes username
    * @param {Object} cardData - Card data to save
    * @returns {Promise<Object|null>} Saved card data
    */
@@ -52,9 +52,10 @@ export const useCard = () => {
       // Get existing card
       const existingCard = await getUserCard()
       
-      // Prepare data
+      // Prepare data with username from user record
       const saveData = {
         user_id: user.value.id,
+        username: user.value.username, // FIX: Add username from user record
         ...cardData,
         is_active: true
       }
@@ -80,24 +81,33 @@ export const useCard = () => {
   }
   
   /**
-   * Upload profile image
+   * Upload profile image - FIXED: Better error handling and validation
    * @param {File} file - Image file
    * @returns {Promise<Object|null>} Updated card record
    */
   const uploadProfileImage = async (file) => {
-    if (!pb || !user.value) return null
+    if (!pb || !user.value) {
+      console.error('No PocketBase client or user available')
+      return null
+    }
     
+    if (!file || !file.type.startsWith('image/')) {
+      console.error('Invalid file type')
+      return null
+    }
+
     try {
-      console.log('Starting image upload for file:', file.name)
+      console.log('Starting image upload for file:', file.name, 'Size:', file.size)
       
-      // Get or create card
+      // Get or create card with username
       let card = await getUserCard()
       
       if (!card) {
-        console.log('No existing card, creating new one')
+        console.log('No existing card, creating new one with username')
         // Create minimal card if doesn't exist
         card = await pb.collection('cards').create({
           user_id: user.value.id,
+          username: user.value.username, // FIX: Include username when creating card
           first_name: '',
           last_name: '',
           company: '',
@@ -118,7 +128,7 @@ export const useCard = () => {
       return result
     } catch (err) {
       console.error('Error uploading image:', err)
-      return null
+      throw err // Re-throw so calling code can handle the error
     }
   }
   

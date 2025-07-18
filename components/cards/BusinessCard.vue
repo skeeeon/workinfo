@@ -69,7 +69,7 @@
         </button>
       </div>
 
-      <!-- Contact methods with responsive layout -->
+      <!-- Contact methods with FIXED responsive layout -->
       <div v-if="contactMethods.length > 0" class="contact-methods">
         <div class="contact-container">
           <a 
@@ -92,7 +92,7 @@
 
 <script setup>
 /**
- * Business Card component - Updated with responsive contact layout
+ * Business Card component - FIXED contact icons alignment
  * Used for public card display
  */
 
@@ -435,19 +435,20 @@ const handleImageError = (event) => {
   transform: translateY(-1px);
 }
 
-/* Contact methods with responsive layout */
+/* Contact methods with FIXED responsive layout */
 .contact-methods {
   margin-top: 2rem;
 }
 
-/* UPDATED: Responsive contact container */
+/* FIXED: Centered contact container using flexbox */
 .contact-container {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
   gap: 1rem;
   max-width: 600px;
   margin: 0 auto;
-  /* Desktop: Single row of all items */
-  grid-template-columns: repeat(5, 1fr);
 }
 
 .contact-item {
@@ -460,6 +461,10 @@ const handleImageError = (event) => {
   text-decoration: none;
   color: var(--color-content-primary);
   transition: all 0.2s ease;
+  /* FIXED: Ensure consistent width for alignment */
+  min-width: 100px;
+  max-width: 120px;
+  flex: 0 0 auto;
 }
 
 .contact-item:hover {
@@ -490,7 +495,7 @@ const handleImageError = (event) => {
   text-align: center;
 }
 
-/* Mobile responsive layout: 3 items top row, 2 items bottom row centered */
+/* Mobile responsive layout: Maintain centered alignment */
 @media (max-width: 768px) {
   .business-card {
     padding: 1rem;
@@ -506,39 +511,22 @@ const handleImageError = (event) => {
     height: 100px;
   }
   
-  /* UPDATED: Mobile contact layout - 3-2 pattern */
+  /* MOBILE: Keep flexbox layout for consistent centering */
   .contact-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 1rem;
+    gap: 0.75rem;
   }
   
   .contact-item {
-    flex: 1 1 calc(33.333% - 0.67rem); /* 3 items per row with gap */
-    min-width: 100px;
-    max-width: 120px;
-  }
-  
-  /* For items 4 and 5 (second row), center them */
-  .contact-item:nth-child(4),
-  .contact-item:nth-child(5) {
-    flex: 1 1 calc(50% - 0.5rem); /* 2 items per row with gap */
-    max-width: 140px; /* Slightly wider for better balance */
-  }
-  
-  /* If we have exactly 4 items, make the 4th item center in the second row */
-  .contact-container:has(.contact-item:nth-child(4):last-child) .contact-item:nth-child(4) {
-    flex: 1 1 auto;
-    max-width: 140px;
+    min-width: 90px;
+    max-width: 110px;
   }
 }
 
 /* Smaller mobile screens */
 @media (max-width: 480px) {
   .contact-item {
-    min-width: 90px;
+    min-width: 80px;
+    max-width: 100px;
     padding: 0.75rem 0.5rem;
   }
   
@@ -550,6 +538,29 @@ const handleImageError = (event) => {
   
   .contact-label {
     font-size: 0.8125rem;
+  }
+  
+  .contact-container {
+    gap: 0.5rem;
+  }
+}
+
+/* FIXED: Better handling for different numbers of contact items */
+@media (min-width: 769px) {
+  /* Desktop: All items in a single centered row */
+  .contact-container {
+    flex-wrap: nowrap;
+    justify-content: center;
+  }
+  
+  /* Adjust spacing based on number of items */
+  .contact-item:only-child {
+    max-width: 140px;
+  }
+  
+  .contact-item:nth-child(2):last-child,
+  .contact-item:first-child:nth-last-child(2) {
+    max-width: 130px;
   }
 }
 </style>

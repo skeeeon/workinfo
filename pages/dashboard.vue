@@ -93,7 +93,7 @@
 
 <script setup>
 /**
- * Dashboard page - Fixed layout for better viewport usage
+ * Dashboard page - COMPLETE VERSION with all fixes implemented
  * Main interface for managing business cards with optimized layout
  */
 
@@ -244,22 +244,66 @@ const handleSaveCard = async (formData) => {
 }
 
 /**
- * Handle image upload
+ * Handle image upload - FIXED: Proper async error handling and user feedback
  */
 const handleImageUpload = async (file) => {
+  // Validate file client-side first
+  if (!file) {
+    showNotification('No file selected', 'error')
+    return
+  }
+  
+  if (!file.type.startsWith('image/')) {
+    showNotification('Please select a valid image file', 'error')
+    return
+  }
+  
+  if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    showNotification('Image size must be less than 5MB', 'error')
+    return
+  }
+  
   try {
+    console.log('Dashboard: Starting image upload for file:', file.name, 'Size:', file.size)
+    
+    // Show loading state in the ImageUpload component by not showing success yet
+    
+    // Call the upload function and wait for it
     const result = await uploadProfileImage(file)
     
     if (result) {
-      // Reload card data to get updated image
+      console.log('Dashboard: Image upload successful, result:', result.id)
+      
+      // Update local card data immediately to show the new image
+      actualCardRecord.value = result
+      
+      // Also reload full card data to ensure consistency
       await loadCardData()
+      
       showNotification('Image uploaded successfully!', 'success')
     } else {
-      showNotification('Failed to upload image', 'error')
+      console.error('Dashboard: Image upload returned null/false')
+      showNotification('Failed to upload image - please try again', 'error')
     }
   } catch (error) {
-    console.error('Image upload error:', error)
-    showNotification('Failed to upload image', 'error')
+    console.error('Dashboard: Image upload error:', error)
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to upload image'
+    
+    if (error.message) {
+      if (error.message.includes('network') || error.message.includes('fetch')) {
+        errorMessage = 'Network error - please check your connection'
+      } else if (error.message.includes('size') || error.message.includes('large')) {
+        errorMessage = 'Image file is too large'
+      } else if (error.message.includes('format') || error.message.includes('type')) {
+        errorMessage = 'Invalid image format'
+      } else {
+        errorMessage = `Upload failed: ${error.message}`
+      }
+    }
+    
+    showNotification(errorMessage, 'error')
   }
 }
 

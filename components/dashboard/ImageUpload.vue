@@ -32,17 +32,18 @@
       <input 
         ref="fileInput"
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/jpg,image/png,image/webp"
         class="hidden"
         @change="handleFileSelect"
         :disabled="disabled || uploading"
       />
 
-      <!-- Upload Button -->
+      <!-- Upload Button - FIXED: Now properly triggers file input -->
       <button 
         @click="triggerFileSelect"
         class="upload-btn"
         :disabled="disabled || uploading"
+        type="button"
       >
         <span v-if="uploading" class="spinner"></span>
         <PhotoIcon v-else class="w-4 h-4 mr-2" />
@@ -74,7 +75,7 @@
 
 <script setup>
 /**
- * Image upload component - Fixed URL generation
+ * Image upload component - FIXED: Properly triggers file selection and handles uploads
  * Properly handles card objects and generates correct PocketBase URLs
  */
 
@@ -154,20 +155,40 @@ const currentImageUrl = computed(() => {
 })
 
 /**
- * Trigger file input click
+ * Trigger file input click - FIXED: Properly triggers file input
  */
 const triggerFileSelect = () => {
-  if (fileInput.value && !disabled && !uploading.value) {
-    fileInput.value.click()
+  console.log('Triggering file select, disabled:', props.disabled, 'uploading:', uploading.value)
+  
+  if (!fileInput.value) {
+    console.error('File input ref not available')
+    return
   }
+  
+  if (props.disabled || uploading.value) {
+    console.log('Upload disabled or in progress')
+    return
+  }
+  
+  // Clear previous messages
+  clearMessages()
+  
+  // Trigger the file input
+  fileInput.value.click()
+  console.log('File input clicked')
 }
 
 /**
- * Handle file selection
+ * Handle file selection - FIXED: Better validation and error handling
  */
-const handleFileSelect = (event) => {
+const handleFileSelect = async (event) => {
   const file = event.target.files[0]
-  if (!file) return
+  console.log('File selected:', file)
+  
+  if (!file) {
+    console.log('No file selected')
+    return
+  }
 
   // Clear previous messages
   clearMessages()
@@ -176,14 +197,17 @@ const handleFileSelect = (event) => {
   const validation = validateFile(file)
   if (!validation.valid) {
     errorMessage.value = validation.error
+    console.error('File validation failed:', validation.error)
     return
   }
 
+  console.log('File validation passed, creating preview and starting upload')
+  
   // Create preview
   createPreview(file)
 
   // Start upload process
-  uploadFile(file)
+  await uploadFile(file)
 }
 
 /**
@@ -218,25 +242,30 @@ const createPreview = (file) => {
   const reader = new FileReader()
   reader.onload = (e) => {
     previewUrl.value = e.target.result
+    console.log('Preview created')
   }
   reader.onerror = () => {
     errorMessage.value = 'Failed to create image preview'
+    console.error('Failed to create preview')
   }
   reader.readAsDataURL(file)
 }
 
 /**
- * Upload file
+ * Upload file - FIXED: Better error handling and user feedback
  */
 const uploadFile = async (file) => {
   uploading.value = true
+  console.log('Starting file upload process')
 
   try {
     // Emit upload event to parent component
-    emit('upload', file)
+    await emit('upload', file)
 
     // Show success message
     successMessage.value = 'Image uploaded successfully!'
+    console.log('Upload completed successfully')
+    
     setTimeout(() => {
       successMessage.value = ''
       previewUrl.value = null // Clear preview after success
@@ -248,6 +277,11 @@ const uploadFile = async (file) => {
     previewUrl.value = null
   } finally {
     uploading.value = false
+    
+    // Clear the file input so the same file can be selected again
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
   }
 }
 
@@ -295,6 +329,15 @@ watch(() => props.currentImage, () => {
   if (!props.currentImage) {
     previewUrl.value = null
   }
+})
+
+// Debug logging on mount
+onMounted(() => {
+  console.log('ImageUpload mounted with props:', {
+    currentImage: props.currentImage,
+    cardId: props.cardId,
+    disabled: props.disabled
+  })
 })
 </script>
 
