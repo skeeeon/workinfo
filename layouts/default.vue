@@ -1,49 +1,109 @@
 <template>
-  <div class="min-h-screen flex flex-col theme-transition">
-    <Header />
-    <main class="flex-grow">
+  <div class="app-layout">
+    <!-- Navigation -->
+    <AppNavigation />
+    
+    <!-- Main Content -->
+    <main class="main-content">
       <slot />
     </main>
-    <Footer />
+    
+    <!-- Footer -->
+    <AppFooter />
+    
+    <!-- PWA Install Prompt - Added for iOS installation guidance -->
+    <PWAInstallPrompt 
+      :auto-show="true"
+      :show-on-mobile="true"
+      :show-on-desktop="false"
+    />
   </div>
 </template>
 
 <script setup>
 /**
- * Default layout for WorkInfo application
- * Provides the main structure for most pages
+ * Default layout with PWA install prompt support
+ * Includes site-wide navigation, footer, and PWA installation guidance
  */
 
-// Initialize the theme system
-const { isDarkMode } = useTheme()
+// Import components
+import AppNavigation from '~/components/layout/AppNavigation.vue'
+import AppFooter from '~/components/layout/AppFooter.vue'
+import PWAInstallPrompt from '~/components/common/PWAInstallPrompt.vue'
+
+// Theme management
+const { currentTheme, initializeTheme } = useTheme()
+
+// Initialize theme on mount
+onMounted(() => {
+  initializeTheme()
+})
+
+// Watch for theme changes and apply to document
+watch(currentTheme, (newTheme) => {
+  if (import.meta.client) {
+    document.documentElement.setAttribute('data-theme', newTheme)
+  }
+}, { immediate: true })
 </script>
 
 <style>
-/* Global container style */
-.container {
-  @apply px-4 sm:px-6 mx-auto;
-  max-width: 1280px;
+/* Global app layout styles */
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-surface-primary);
+  color: var(--color-content-primary);
 }
 
-/* Add smooth scrolling to the entire page */
-html {
-  scroll-behavior: smooth;
+.main-content {
+  flex: 1;
+  width: 100%;
 }
 
-/* Improve focus styles for accessibility */
-:focus-visible {
-  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+/* PWA-specific styles */
+@media (display-mode: standalone) {
+  /* Styles when app is installed as PWA */
+  .app-layout {
+    /* Add safe area support for devices with notches */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Hide certain elements when in PWA mode */
+  .pwa-hide {
+    display: none;
+  }
 }
 
-/* Theme transition for smooth color changes */
-.theme-transition {
-  transition-property: background-color, border-color, color;
-  transition-timing-function: ease;
-  transition-duration: 0.3s;
+/* iOS PWA status bar styling */
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) {
+    .app-layout {
+      /* iOS PWA status bar handling */
+      padding-top: max(env(safe-area-inset-top), 20px);
+    }
+  }
 }
 
-/* Ensure proper loading states */
-.nuxt-loading-indicator {
-  background: var(--color-primary);
+/* Print styles */
+@media print {
+  .app-layout {
+    min-height: auto;
+  }
+  
+  .main-content {
+    flex: none;
+  }
+  
+  /* Hide navigation and footer when printing */
+  nav,
+  footer,
+  .pwa-install-prompt {
+    display: none !important;
+  }
 }
 </style>
