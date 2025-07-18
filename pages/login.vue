@@ -2,7 +2,7 @@
   <div class="card">
     <div class="card-header text-center">
       <h1 class="card-title">Welcome Back</h1>
-      <p class="card-subtitle">Sign in to your Hivecard account</p>
+      <p class="card-subtitle">Sign in to your WorkInfo account</p>
     </div>
 
     <form @submit.prevent="handleLogin" class="space-y-6">
@@ -67,7 +67,7 @@
 
 <script setup>
 /**
- * Login page for Hivecard
+ * Login page for WorkInfo
  * Handles user authentication with email and password
  */
 
@@ -101,8 +101,8 @@ watch(credentials, () => {
 
 // SEO
 useSeoMeta({
-  title: 'Login - Hivecard',
-  description: 'Sign in to your Hivecard account to manage your digital business card.',
+  title: 'Login - WorkInfo',
+  description: 'Sign in to your WorkInfo account to manage your professional contact card.',
   robots: 'noindex, nofollow'
 })
 </script>

@@ -43,13 +43,13 @@ export const useTheme = () => {
     systemPrefersDark.value = mediaQuery.matches
     
     // Load saved theme
-    const savedTheme = localStorage.getItem('hivecard-theme')
+    const savedTheme = localStorage.getItem('workinfo-theme')
     if (['light', 'dark', 'auto'].includes(savedTheme)) {
       currentTheme.value = savedTheme
     }
     
     // Load saved colors
-    const savedColors = localStorage.getItem('hivecard-colors')
+    const savedColors = localStorage.getItem('workinfo-colors')
     if (savedColors) {
       try {
         const parsed = JSON.parse(savedColors)
@@ -153,7 +153,7 @@ export const useTheme = () => {
    */
   const saveTheme = () => {
     if (import.meta.client) {
-      localStorage.setItem('hivecard-theme', currentTheme.value)
+      localStorage.setItem('workinfo-theme', currentTheme.value)
     }
   }
   
@@ -162,7 +162,7 @@ export const useTheme = () => {
    */
   const saveCustomColors = () => {
     if (import.meta.client) {
-      localStorage.setItem('hivecard-colors', JSON.stringify(customColors.value))
+      localStorage.setItem('workinfo-colors', JSON.stringify(customColors.value))
     }
   }
   

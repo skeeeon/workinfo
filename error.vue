@@ -51,10 +51,10 @@
            :style="{ color: 'var(--color-content-secondary)' }">
           If this problem persists, please contact us:
         </p>
-        <a href="mailto:support@hivecard.me" 
+        <a href="mailto:support@workinfo.me" 
            class="text-sm font-medium hover:underline"
            :style="{ color: 'var(--color-primary)' }">
-          support@hivecard.me
+          support@workinfo.me
         </a>
       </div>
       
@@ -68,7 +68,7 @@
 
 <script setup>
 /**
- * Error page component for Hivecard
+ * Error page component for WorkInfo
  * Handles various error states with appropriate messaging and actions
  */
 
@@ -127,7 +127,7 @@ const handleError = async () => {
 
 // SEO for error pages
 useSeoMeta({
-  title: `${props.error?.statusCode || 'Error'} - Hivecard`,
+  title: `${props.error?.statusCode || 'Error'} - WorkInfo`,
   description: errorMessage.value,
   robots: 'noindex, nofollow'
 })

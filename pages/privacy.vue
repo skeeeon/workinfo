@@ -20,7 +20,7 @@
           <p>We implement appropriate security measures to protect your personal information.</p>
           
           <h2>Contact Us</h2>
-          <p>If you have any questions about this Privacy Policy, please contact us at support@hivecard.me</p>
+          <p>If you have any questions about this Privacy Policy, please contact us at support@workinfo.me</p>
         </div>
       </div>
     </div>
@@ -29,7 +29,7 @@
 
 <script setup>
 useSeoMeta({
-  title: 'Privacy Policy - Hivecard',
+  title: 'Privacy Policy - WorkInfo',
   description: 'Our privacy policy explains how we collect, use, and protect your information.'
 })
 </script>

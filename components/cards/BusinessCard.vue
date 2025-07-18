@@ -52,6 +52,7 @@
           <h1 class="profile-name">{{ displayName }}</h1>
           <p v-if="card.title" class="profile-title">{{ card.title }}</p>
           <p v-if="card.company" class="profile-company">{{ card.company }}</p>
+          <p v-if="card.address" class="profile-address">{{ card.address }}</p>
         </div>
       </div>
 
@@ -68,9 +69,9 @@
         </button>
       </div>
 
-      <!-- Contact methods -->
+      <!-- Contact methods with responsive layout -->
       <div v-if="contactMethods.length > 0" class="contact-methods">
-        <div class="contact-grid">
+        <div class="contact-container">
           <a 
             v-for="contact in contactMethods" 
             :key="contact.key"
@@ -91,7 +92,8 @@
 
 <script setup>
 /**
- * Business Card component - Fixed image centering and layout
+ * Business Card component - Updated with responsive contact layout
+ * Used for public card display
  */
 
 import {
@@ -388,6 +390,14 @@ const handleImageError = (event) => {
   line-height: 1.4;
 }
 
+.profile-address {
+  font-size: 0.9375rem;
+  color: var(--color-content-secondary);
+  line-height: 1.4;
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
 /* Description section */
 .description-section {
   margin-bottom: 2rem;
@@ -425,17 +435,19 @@ const handleImageError = (event) => {
   transform: translateY(-1px);
 }
 
-/* Contact methods */
+/* Contact methods with responsive layout */
 .contact-methods {
   margin-top: 2rem;
 }
 
-.contact-grid {
+/* UPDATED: Responsive contact container */
+.contact-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 1rem;
   max-width: 600px;
   margin: 0 auto;
+  /* Desktop: Single row of all items */
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .contact-item {
@@ -478,7 +490,7 @@ const handleImageError = (event) => {
   text-align: center;
 }
 
-/* Responsive design */
+/* Mobile responsive layout: 3 items top row, 2 items bottom row centered */
 @media (max-width: 768px) {
   .business-card {
     padding: 1rem;
@@ -494,8 +506,50 @@ const handleImageError = (event) => {
     height: 100px;
   }
   
-  .contact-grid {
-    grid-template-columns: repeat(2, 1fr);
+  /* UPDATED: Mobile contact layout - 3-2 pattern */
+  .contact-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .contact-item {
+    flex: 1 1 calc(33.333% - 0.67rem); /* 3 items per row with gap */
+    min-width: 100px;
+    max-width: 120px;
+  }
+  
+  /* For items 4 and 5 (second row), center them */
+  .contact-item:nth-child(4),
+  .contact-item:nth-child(5) {
+    flex: 1 1 calc(50% - 0.5rem); /* 2 items per row with gap */
+    max-width: 140px; /* Slightly wider for better balance */
+  }
+  
+  /* If we have exactly 4 items, make the 4th item center in the second row */
+  .contact-container:has(.contact-item:nth-child(4):last-child) .contact-item:nth-child(4) {
+    flex: 1 1 auto;
+    max-width: 140px;
+  }
+}
+
+/* Smaller mobile screens */
+@media (max-width: 480px) {
+  .contact-item {
+    min-width: 90px;
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .contact-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 0.5rem;
+  }
+  
+  .contact-label {
+    font-size: 0.8125rem;
   }
 }
 </style>

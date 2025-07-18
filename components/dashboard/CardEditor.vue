@@ -6,7 +6,7 @@
       <div class="editor-section">
         <div class="section-header">
           <h2 class="section-title">Personal Information</h2>
-          <p class="section-subtitle">Basic details for your business card</p>
+          <p class="section-subtitle">Basic details for your contact card</p>
         </div>
         
         <div class="form-grid">
@@ -65,6 +65,22 @@
           />
           <div v-if="errors.company" class="form-error">
             {{ errors.company }}
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="form-group">
+          <label for="address" class="form-label">Address</label>
+          <input
+            id="address"
+            v-model="formData.address"
+            type="text"
+            class="form-input"
+            placeholder="123 Main St, City, State 12345"
+            :disabled="isLoading"
+          />
+          <div class="form-helper">
+            Optional business or office address
           </div>
         </div>
 
@@ -212,6 +228,36 @@
         <ThemeCustomizer />
       </div>
 
+      <!-- Analytics Section -->
+      <div class="editor-section">
+        <div class="section-header">
+          <h2 class="section-title">Analytics Tracking</h2>
+          <p class="section-subtitle">Optional analytics script for tracking card views</p>
+        </div>
+        
+        <div class="form-group">
+          <label for="tracking_script" class="form-label">Tracking Script</label>
+          <textarea
+            id="tracking_script"
+            v-model="formData.tracking_script"
+            class="form-input"
+            rows="3"
+            placeholder='<script defer src="https://cloud.umami.is/script.js" data-website-id="your-id"></script>'
+            :disabled="isLoading"
+          ></textarea>
+          <div class="form-helper">
+            <p>Paste your analytics tracking script here (Umami, Google Analytics, etc.)</p>
+            <p class="text-xs mt-1"><strong>Supported providers:</strong> Umami, Google Analytics, Plausible, Simple Analytics</p>
+          </div>
+          <div v-if="trackingScriptError" class="form-error">
+            {{ trackingScriptError }}
+          </div>
+          <div v-else-if="trackingScriptValid && formData.tracking_script" class="form-success">
+            ✓ Valid tracking script detected
+          </div>
+        </div>
+      </div>
+
       <!-- Submit Button -->
       <div class="submit-section">
         <button
@@ -234,7 +280,7 @@
 
 <script setup>
 /**
- * Card Editor component - Clean implementation
+ * Card Editor component - Clean implementation with address field
  * Handles card data editing with validation and auto-save
  */
 
@@ -255,24 +301,29 @@ const emit = defineEmits(['save', 'image-upload'])
 
 // Composables
 const { validateCard } = useCard()
+const { validateTrackingScript: validateScript } = useTrackingScript()
 
 // Form data
 const formData = ref({
   first_name: '',
   last_name: '',
   company: '',
+  address: '',
   title: '',
   note: '',
   mobile: '',
   office: '',
   email: '',
   website: '',
-  calendar: ''
+  calendar: '',
+  tracking_script: ''
 })
 
 // State
 const errors = ref({})
 const autoSaving = ref(false)
+const trackingScriptError = ref('')
+const trackingScriptValid = ref(false)
 let saveTimeout = null
 
 // Watch for card data changes
@@ -288,7 +339,11 @@ watch(() => props.cardData, (newData) => {
 const isFormValid = computed(() => {
   const validation = validateCard(formData.value)
   errors.value = validation.errors
-  return validation.isValid
+  
+  // Also check tracking script validation
+  const isTrackingValid = !formData.value.tracking_script || trackingScriptValid.value
+  
+  return validation.isValid && isTrackingValid
 })
 
 /**
@@ -300,6 +355,21 @@ const handleSubmit = () => {
   const cleanData = cleanFormData(formData.value)
   emit('save', cleanData)
 }
+
+/**
+ * Validate tracking script for security
+ */
+const validateTrackingScript = (script) => {
+  const result = validateScript(script)
+  trackingScriptError.value = result.error || ''
+  trackingScriptValid.value = result.isValid
+  return result.isValid
+}
+
+// Watch for tracking script changes
+watch(() => formData.value.tracking_script, (newScript) => {
+  validateTrackingScript(newScript)
+}, { immediate: true })
 
 /**
  * Handle image upload
@@ -443,6 +513,13 @@ onUnmounted(() => {
   color: var(--color-content-secondary);
   font-size: 0.875rem;
   margin-top: 0.25rem;
+}
+
+.form-success {
+  color: var(--color-success);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
 }
 
 /* Submit section */

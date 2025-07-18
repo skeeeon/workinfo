@@ -11,8 +11,8 @@
         
         <p class="text-xl mb-8 max-w-3xl mx-auto" 
            :style="{ color: 'var(--color-content-secondary)' }">
-          Create beautiful, customizable digital business cards that make lasting impressions. 
-          Perfect for modern professionals in the Hive coworking community.
+          Create beautiful, customizable professional contact cards that make lasting impressions. 
+          Perfect for modern professionals and networking.
         </p>
         
         <div class="flex flex-col sm:flex-row gap-4 justify-center mb-12">
@@ -71,7 +71,7 @@
           </h2>
           <p class="text-lg max-w-2xl mx-auto" 
              :style="{ color: 'var(--color-content-secondary)' }">
-            Get your digital business card up and running in minutes
+            Get your professional contact card up and running in minutes
           </p>
         </div>
         
@@ -105,7 +105,7 @@
           Ready to Go Digital?
         </h2>
         <p class="text-xl mb-8 text-blue-100 max-w-2xl mx-auto">
-          Join professionals who are already making better connections with digital business cards.
+          Join professionals who are already making better connections with digital contact cards.
         </p>
         <NuxtLink to="/register" 
                   class="btn btn-secondary bg-white text-blue-600 hover:bg-gray-100">
@@ -118,7 +118,7 @@
 
 <script setup>
 /**
- * Home page for Hivecard
+ * Home page for WorkInfo
  * Landing page with hero, features, and call-to-action sections
  */
 
@@ -134,11 +134,11 @@ import {
 
 // SEO
 useSeoMeta({
-  title: 'Hivecard - Digital Business Cards for Modern Professionals',
-  description: 'Create beautiful, customizable digital business cards. Perfect for professionals in coworking spaces. Easy to create, share, and update.',
-  keywords: 'digital business cards, professional networking, coworking, QR codes, vCard, contact sharing',
-  ogTitle: 'Hivecard - Digital Business Cards',
-  ogDescription: 'Create and share professional digital business cards',
+  title: 'WorkInfo - Professional Contact Cards for Modern Professionals',
+  description: 'Create beautiful, customizable professional contact cards. Perfect for modern professionals and networking. Easy to create, share, and update.',
+  keywords: 'professional contact cards, digital business cards, networking, QR codes, vCard, contact sharing',
+  ogTitle: 'WorkInfo - Professional Contact Cards',
+  ogDescription: 'Create and share professional contact cards',
   ogType: 'website'
 })
 

@@ -7,9 +7,9 @@
             :style="{ borderColor: 'var(--color-border-primary)' }">
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between">
-          <!-- Hivecard logo -->
+          <!-- WorkInfo logo -->
           <NuxtLink to="/" class="flex items-center transition-colors" 
-                    aria-label="Hivecard - Return to main site">
+                    aria-label="WorkInfo - Return to main site">
             <Logo />
           </NuxtLink>
           
@@ -33,7 +33,7 @@
                     class="inline-flex items-center font-medium transition-colors text-sm"
                     :style="{ color: 'var(--color-primary)' }">
             <ArrowLeftIcon class="w-4 h-4 mr-2" />
-            Visit Hivecard.me
+            Visit WorkInfo.me
           </NuxtLink>
           
           <span class="hidden sm:inline text-xs" 
@@ -43,7 +43,7 @@
           
           <p class="text-xs" 
              :style="{ color: 'var(--color-content-secondary)' }">
-            Digital Business Card
+            Professional Contact Card
           </p>
         </div>
       </div>
@@ -53,9 +53,9 @@
 
 <script setup>
 /**
- * Minimal card layout for business cards
+ * Minimal card layout for contact cards
  * Provides clean, focused experience for direct sharing
- * Removes main navigation clutter while maintaining Hivecard branding
+ * Removes main navigation clutter while maintaining WorkInfo branding
  */
 
 // Import Heroicons

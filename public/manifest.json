@@ -1,7 +1,7 @@
 {
-  "name": "Hivecard - Digital Business Cards",
-  "short_name": "Hivecard",
-  "description": "Create and share professional digital business cards",
+  "name": "WorkInfo - Professional Contact Cards",
+  "short_name": "WorkInfo",
+  "description": "Create and share professional contact cards",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -52,7 +52,7 @@
     {
       "name": "Dashboard",
       "short_name": "Dashboard", 
-      "description": "Manage your business card",
+      "description": "Manage your contact card",
       "url": "/dashboard",
       "icons": [
         {

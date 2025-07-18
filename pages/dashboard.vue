@@ -36,7 +36,7 @@
               </div>
               
               <div class="preview-container">
-                <PublicBusinessCard 
+                <CompactBusinessCard 
                   v-if="hasValidData"
                   :card="previewCardData"
                   @show-qr="showQRModal = true"
@@ -50,25 +50,25 @@
               </div>
             </div>
 
-            <!-- Additional Actions -->
+            <!-- Additional Actions - Now more compact -->
             <div class="additional-actions">
               <NuxtLink 
                 v-if="currentUser?.username"
                 :to="`/users/${currentUser.username}`"
                 target="_blank"
-                class="view-public-btn"
+                class="action-btn action-btn-primary"
               >
-                <ArrowTopRightOnSquareIcon class="w-4 h-4 mr-2" />
-                View Full Public Page
+                <ArrowTopRightOnSquareIcon class="w-4 h-4" />
+                <span class="btn-text">View Public</span>
               </NuxtLink>
               
               <button 
                 @click="downloadVCard"
-                class="download-btn"
+                class="action-btn action-btn-secondary"
                 :disabled="!hasValidData"
               >
-                <ArrowDownTrayIcon class="w-4 h-4 mr-2" />
-                Download vCard
+                <ArrowDownTrayIcon class="w-4 h-4" />
+                <span class="btn-text">Download</span>
               </button>
             </div>
           </div>
@@ -93,7 +93,7 @@
 
 <script setup>
 /**
- * Dashboard page - Clean version to avoid compilation conflicts
+ * Dashboard page - Fixed layout for better viewport usage
  * Main interface for managing business cards with optimized layout
  */
 
@@ -131,6 +131,7 @@ const cardData = ref({
   first_name: '',
   last_name: '',
   company: '',
+  address: '',
   title: '',
   note: '',
   mobile: '',
@@ -138,7 +139,8 @@ const cardData = ref({
   email: '',
   website: '',
   calendar: '',
-  profile_image: null
+  profile_image: null,
+  tracking_script: ''
 })
 
 const cardLoading = ref(true)
@@ -304,8 +306,8 @@ onMounted(() => {
 
 // SEO
 useSeoMeta({
-  title: 'Edit Your Card - Hivecard',
-  description: 'Edit and customize your digital business card with live preview',
+  title: 'Edit Your Card - WorkInfo',
+  description: 'Edit and customize your professional contact card with live preview',
   robots: 'noindex, nofollow'
 })
 </script>
@@ -315,11 +317,11 @@ useSeoMeta({
 .dashboard {
   min-height: 100vh;
   background-color: var(--color-surface-secondary);
-  padding: 1rem 0 2rem; /* Reduced top padding */
+  padding: 0.75rem 0 2rem; /* Reduced top padding */
 }
 
 .container {
-  max-width: 1600px; /* Increased for more space */
+  max-width: 1600px;
   margin: 0 auto;
   padding: 0 1rem;
 }
@@ -373,18 +375,18 @@ useSeoMeta({
   color: var(--color-content-secondary);
 }
 
-/* Dashboard content */
+/* Dashboard content - OPTIMIZED LAYOUT */
 .dashboard-content {
   display: grid;
-  grid-template-columns: 1fr 520px; /* Slightly wider right column */
-  gap: 1.5rem; /* Reduced gap */
+  grid-template-columns: 1fr 480px; /* Slightly smaller right column */
+  gap: 1.25rem; /* Reduced gap */
   align-items: start;
-  min-height: calc(100vh - 120px); /* Adjusted for smaller header */
+  min-height: calc(100vh - 100px); /* Reduced min-height */
 }
 
 .editor-column {
   min-width: 0;
-  max-height: calc(100vh - 120px); /* Adjusted for new header */
+  max-height: calc(100vh - 100px); /* Adjusted for smaller header */
   overflow-y: auto;
   padding-right: 0.5rem;
   position: relative;
@@ -424,51 +426,58 @@ useSeoMeta({
 
 .preview-column {
   min-width: 0;
-  width: 520px; /* Updated width */
+  width: 480px; /* Fixed width */
 }
 
+/* FIXED: Better sticky container sizing */
 .preview-sticky-container {
   position: sticky;
-  top: 2rem;
-  max-height: calc(100vh - 4rem);
-  overflow-y: auto;
+  top: 1rem; /* Reduced from 2rem */
+  max-height: calc(100vh - 2rem); /* Better height calculation */
+  overflow: hidden; /* Changed from overflow-y: auto */
   border-radius: 0.75rem;
   background-color: transparent;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Section styling */
+/* Section styling - OPTIMIZED */
 .preview-section {
   background-color: var(--color-surface-primary);
   border: 1px solid var(--color-border-primary);
   border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: 0.75rem; /* Reduced padding */
+  margin-bottom: 0.75rem; /* Reduced margin */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  flex: 1;
+  min-height: 0; /* Allow flexbox to shrink */
+  overflow: hidden;
 }
 
 .section-header {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem; /* Reduced */
 }
 
 .section-title {
-  font-size: 1.125rem;
+  font-size: 1rem; /* Smaller */
   font-weight: 600;
   color: var(--color-content-primary);
   margin-bottom: 0.25rem;
 }
 
 .section-subtitle {
-  font-size: 0.8125rem;
+  font-size: 0.75rem; /* Smaller */
   color: var(--color-content-secondary);
 }
 
-/* Preview container - no scaling since using public card component */
+/* Preview container - COMPACT */
 .preview-container {
   background-color: var(--color-surface-secondary);
   border: 1px solid var(--color-border-primary);
   border-radius: 0.5rem;
-  padding: 0.5rem; /* Minimal padding since public card has its own */
-  min-height: 400px; /* Restore normal height */
+  padding: 0.25rem; /* Minimal padding */
+  min-height: 300px; /* Reduced from 400px */
+  overflow: hidden;
 }
 
 .preview-placeholder {
@@ -481,64 +490,74 @@ useSeoMeta({
 }
 
 .placeholder-icon {
-  width: 4rem;
-  height: 4rem;
+  width: 3rem; /* Smaller */
+  height: 3rem;
   color: var(--color-content-tertiary);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .placeholder-text {
   color: var(--color-content-secondary);
+  font-size: 0.875rem;
 }
 
-/* Additional actions - compact buttons */
+/* COMPACT ACTION BUTTONS */
 .additional-actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-top: 0; /* No top margin */
+  flex-shrink: 0; /* Don't shrink */
 }
 
-.view-public-btn,
-.download-btn {
+.action-btn {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.625rem 0.75rem;
+  padding: 0.75rem 0.5rem; /* Vertical layout */
   border: 1px solid var(--color-border-primary);
   border-radius: 0.375rem;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.8125rem;
+  font-size: 0.75rem; /* Smaller text */
   font-weight: 500;
+  min-height: 60px; /* Fixed height */
 }
 
-.view-public-btn {
+.action-btn-primary {
   background-color: var(--color-surface-secondary);
   color: var(--color-content-primary);
 }
 
-.view-public-btn:hover {
+.action-btn-primary:hover {
   background-color: var(--color-surface-hover);
   border-color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
-.download-btn {
+.action-btn-secondary {
   background-color: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
 }
 
-.download-btn:hover:not(:disabled) {
+.action-btn-secondary:hover:not(:disabled) {
   background-color: var(--color-primary-darker);
   transform: translateY(-1px);
 }
 
-.download-btn:disabled {
+.action-btn-secondary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+.btn-text {
+  margin-top: 0.25rem;
+  font-size: 0.6875rem; /* Very small */
+  text-align: center;
 }
 
 /* Notification toast */
@@ -577,7 +596,11 @@ useSeoMeta({
 @media (min-width: 1400px) {
   .dashboard-content {
     grid-template-columns: 1fr 500px;
-    gap: 2rem;
+    gap: 1.5rem;
+  }
+  
+  .preview-column {
+    width: 500px;
   }
 }
 
@@ -608,6 +631,22 @@ useSeoMeta({
     max-height: none;
     overflow-y: visible;
   }
+  
+  .additional-actions {
+    flex-direction: row;
+  }
+  
+  .action-btn {
+    flex-direction: row;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    min-height: auto;
+  }
+  
+  .btn-text {
+    margin-top: 0;
+    font-size: 0.875rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -629,19 +668,7 @@ useSeoMeta({
   }
   
   .preview-container {
-    padding: 0.25rem;
-    min-height: 300px;
-  }
-  
-  .additional-actions {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .view-public-btn,
-  .download-btn {
-    padding: 0.75rem;
-    font-size: 0.875rem;
+    min-height: 250px;
   }
 }
 </style>

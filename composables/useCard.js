@@ -187,6 +187,7 @@ export const useCard = () => {
     if (cardData.mobile) lines.push(`TEL;TYPE=CELL:${cardData.mobile}`)
     if (cardData.office) lines.push(`TEL;TYPE=WORK:${cardData.office}`)
     if (cardData.website) lines.push(`URL:${cardData.website}`)
+    if (cardData.address) lines.push(`ADR;TYPE=WORK:;;${cardData.address};;;;`)    
     if (cardData.note) lines.push(`NOTE:${cardData.note}`)
     
     lines.push('END:VCARD')

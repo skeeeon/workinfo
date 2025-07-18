@@ -3,7 +3,7 @@
     <!-- Loading state -->
     <div v-if="pending" class="loading-state">
       <div class="spinner"></div>
-      <p class="loading-text">Loading business card...</p>
+      <p class="loading-text">Loading contact card...</p>
     </div>
 
     <!-- Error state -->
@@ -13,11 +13,11 @@
       </div>
       <h1 class="error-title">Card Not Found</h1>
       <p class="error-message">
-        The business card for "{{ username }}" doesn't exist or may have been removed.
+        The contact card for "{{ username }}" doesn't exist or may have been removed.
       </p>
       <div class="error-actions">
         <NuxtLink to="/" class="btn btn-primary">
-          Visit Hivecard
+          Visit WorkInfo
         </NuxtLink>
         <NuxtLink to="/register" class="btn btn-outlined">
           Create Your Card
@@ -48,7 +48,7 @@
         <p class="powered-text">
           Powered by 
           <NuxtLink to="/" class="powered-link">
-            Hivecard
+            WorkInfo
           </NuxtLink>
         </p>
       </div>
@@ -58,7 +58,7 @@
 
 <script setup>
 /**
- * Public business card page - Fixed with better error handling
+ * Public contact card page - Fixed with better error handling
  * Uses optimized single-query approach for better performance
  */
 
@@ -73,6 +73,7 @@ import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
 // Composables
 const { fetchPublicCard, getPublicShareUrl, isValidPublicCard } = usePublicCard()
 const { loadColorsFromCard } = useTheme()
+const { injectTrackingScript } = useTrackingScript()
 const route = useRoute()
 
 // Get username from route
@@ -127,9 +128,9 @@ const cardShareUrl = computed(() => {
 })
 
 const cardTitle = computed(() => {
-  if (!cardData.value) return 'Business Card'
+  if (!cardData.value) return 'Contact Card'
   const name = `${cardData.value.first_name} ${cardData.value.last_name}`.trim()
-  return `${name} - ${cardData.value.company || 'Business Card'}`
+  return `${name} - ${cardData.value.company || 'Contact Card'}`
 })
 
 const displayName = computed(() => {
@@ -144,7 +145,7 @@ watchEffect(() => {
     console.log('Card not found, throwing 404 for username:', username.value)
     throw createError({
       statusCode: 404,
-      statusMessage: `Business card not found for username: ${username.value}`
+      statusMessage: `Contact card not found for username: ${username.value}`
     })
   }
 })
@@ -154,6 +155,12 @@ watchEffect(() => {
   if (cardData.value && isValidCard.value) {
     console.log('Loading colors from card')
     loadColorsFromCard(cardData.value)
+    
+    // Inject tracking script if present
+    if (cardData.value.tracking_script) {
+      console.log('Injecting tracking script for card')
+      injectTrackingScript(cardData.value.tracking_script)
+    }
   }
 })
 
@@ -163,12 +170,12 @@ watchEffect(() => {
     const description = cardData.value.note || 
       `Connect with ${displayName.value}, ${cardData.value.title || 'Professional'} at ${cardData.value.company || 'their company'}.`
     
-    const title = `${displayName.value} - ${cardData.value.title || 'Professional'} | Hivecard`
+    const title = `${displayName.value} - ${cardData.value.title || 'Professional'} | WorkInfo`
     
     useSeoMeta({
       title,
       description,
-      ogTitle: `${displayName.value} - Digital Business Card`,
+      ogTitle: `${displayName.value} - Professional Contact Card`,
       ogDescription: description,
       ogType: 'profile',
       ogUrl: cardShareUrl.value,
@@ -197,8 +204,8 @@ watchEffect(() => {
   } else {
     // Default SEO for loading/error states
     useSeoMeta({
-      title: `@${username.value} - Hivecard`,
-      description: `View ${username.value}'s digital business card on Hivecard.`,
+      title: `@${username.value} - WorkInfo`,
+      description: `View ${username.value}'s professional contact card on WorkInfo.`,
       robots: 'noindex, nofollow'
     })
   }

@@ -14,7 +14,7 @@
                 <EnvelopeIcon class="contact-icon" />
                 <div>
                   <h3>Email</h3>
-                  <a href="mailto:support@hivecard.me">support@hivecard.me</a>
+                  <a href="mailto:support@workinfo.me">support@workinfo.me</a>
                 </div>
               </div>
               
@@ -37,7 +37,7 @@
 import { EnvelopeIcon, ChatBubbleLeftIcon } from '@heroicons/vue/24/outline'
 
 useSeoMeta({
-  title: 'Contact Us - Hivecard',
-  description: 'Get in touch with the Hivecard team for support and questions.'
+  title: 'Contact Us - WorkInfo',
+  description: 'Get in touch with the WorkInfo team for support and questions.'
 })
 </script>

@@ -8,7 +8,7 @@
 
 <script setup>
 /**
- * Root application component for Hivecard
+ * Root application component for WorkInfo
  * Handles global initialization and provides the main app structure
  */
 
@@ -36,8 +36,8 @@ useHead({
       innerHTML: `
         (function() {
           try {
-            var savedTheme = localStorage.getItem('hivecard-theme') || 'auto';
-            var savedColors = localStorage.getItem('hivecard-colors');
+            var savedTheme = localStorage.getItem('workinfo-theme') || 'auto';
+            var savedColors = localStorage.getItem('workinfo-colors');
             var shouldBeDark = false;
             
             if (savedTheme === 'dark') {

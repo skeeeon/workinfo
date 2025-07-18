@@ -8,10 +8,10 @@
           <p>Last updated: {{ new Date().toLocaleDateString() }}</p>
           
           <h2>Agreement to Terms</h2>
-          <p>By accessing and using Hivecard, you agree to be bound by these Terms of Service.</p>
+          <p>By accessing and using WorkInfo, you agree to be bound by these Terms of Service.</p>
           
           <h2>Use of Service</h2>
-          <p>You may use our service to create and share digital business cards in accordance with these terms.</p>
+          <p>You may use our service to create and share professional contact cards in accordance with these terms.</p>
           
           <h2>User Content</h2>
           <p>You are responsible for all content you upload or share through our service.</p>
@@ -23,7 +23,7 @@
           <p>We may terminate or suspend your account at our discretion.</p>
           
           <h2>Contact Information</h2>
-          <p>For questions about these Terms, contact us at support@hivecard.me</p>
+          <p>For questions about these Terms, contact us at support@workinfo.me</p>
         </div>
       </div>
     </div>
@@ -32,8 +32,7 @@
 
 <script setup>
 useSeoMeta({
-  title: 'Terms of Service - Hivecard',
-  description: 'Terms of service for using the Hivecard digital business card platform.'
+  title: 'Terms of Service - WorkInfo',
+  description: 'Terms of service for using the WorkInfo professional contact card platform.'
 })
 </script>
-

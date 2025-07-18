@@ -50,9 +50,9 @@ export default defineNuxtConfig({
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
-      name: 'Hivecard - Digital Business Cards',
-      short_name: 'Hivecard',
-      description: 'Create and share professional digital business cards',
+      name: 'WorkInfo - Professional Contact Cards',
+      short_name: 'WorkInfo',
+      description: 'Create and share professional contact cards',
       theme_color: '#2563eb',
       background_color: '#ffffff',
       display: 'standalone',
@@ -79,12 +79,12 @@ export default defineNuxtConfig({
   // App configuration
   app: {
     head: {
-      title: 'Hivecard - Digital Business Cards',
+      title: 'WorkInfo - Professional Contact Cards',
       htmlAttrs: { lang: 'en' },
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Create and share professional digital business cards for modern professionals.' },
+        { name: 'description', content: 'Create and share professional contact cards for modern professionals.' },
         { name: 'theme-color', content: '#2563eb' }
       ],
       link: [

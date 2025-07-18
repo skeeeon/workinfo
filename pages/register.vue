@@ -2,7 +2,7 @@
   <div class="card">
     <div class="card-header text-center">
       <h1 class="card-title">Create Your Account</h1>
-      <p class="card-subtitle">Join Hivecard and create your digital business card</p>
+      <p class="card-subtitle">Join WorkInfo and create your professional contact card</p>
     </div>
 
     <form @submit.prevent="handleRegister" class="space-y-6">
@@ -26,7 +26,7 @@
           ✓ Username format is valid
         </div>
         <p class="form-helper">
-          Your username will be used in your card URL: hivecard.me/users/{{ formData.username || 'username' }}
+          Your username will be used in your card URL: workinfo.me/users/{{ formData.username || 'username' }}
         </p>
       </div>
 
@@ -109,7 +109,7 @@
 
 <script setup>
 /**
- * Registration page for Hivecard
+ * Registration page for WorkInfo
  * Handles user registration with client-side format validation
  * Username availability is checked server-side during registration
  */
@@ -198,8 +198,8 @@ watch(formData, () => {
 
 // SEO
 useSeoMeta({
-  title: 'Sign Up - Hivecard',
-  description: 'Create your Hivecard account and start building your digital business card.',
+  title: 'Sign Up - WorkInfo',
+  description: 'Create your WorkInfo account and start building your professional contact card.',
   robots: 'noindex, nofollow'
 })
 </script>

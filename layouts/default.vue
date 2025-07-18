@@ -10,7 +10,7 @@
 
 <script setup>
 /**
- * Default layout for Hivecard application
+ * Default layout for WorkInfo application
  * Provides the main structure for most pages
  */
 

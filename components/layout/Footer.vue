@@ -5,7 +5,7 @@
         <div class="footer-brand">
           <Logo />
           <p class="footer-description">
-            Digital business cards for modern professionals. 
+            Professional contact cards for modern professionals. 
             Create, customize, and share your professional identity.
           </p>
         </div>
@@ -33,7 +33,7 @@
       
       <div class="footer-bottom">
         <p class="copyright">
-          © {{ new Date().getFullYear() }} Hivecard. All rights reserved.
+          © {{ new Date().getFullYear() }} WorkInfo. All rights reserved.
         </p>
       </div>
     </div>

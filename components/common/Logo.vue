@@ -1,6 +1,6 @@
 <template>
   <div class="logo-container" :class="size">
-    <!-- Hivecard logo -->
+    <!-- Workinfo logo -->
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" class="logo-image">
       <!-- Hexagon shape representing hive -->
       <path d="M16 2L26 8v16l-10 6L6 24V8z" 
@@ -27,7 +27,7 @@
     
     <div v-if="showText" class="logo-text-container">
       <span class="logo-text" :class="{'sr-only': textHidden}">
-        <span class="logo-main">Hive</span><span class="logo-suffix">card</span>
+        <span class="logo-main">Work</span><span class="logo-suffix">info</span>
       </span>
     </div>
   </div>
