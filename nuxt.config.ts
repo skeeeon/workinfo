@@ -46,7 +46,7 @@ export default defineNuxtConfig({
     }
   },
 
-  // PWA Configuration
+  // FIXED: Clean PWA Configuration without problematic fallback
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
@@ -71,47 +71,57 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      // Handle navigation fallback properly
-      navigateFallback: '/',
-      navigateFallbackDenylist: [/^\/api\//, /^\/admin\//, /^\/_nuxt\//],
+      // FIXED: Use the proper Nuxt offline page instead of _fallback
+      navigateFallback: '/offline',
       
-      // Glob patterns that work with Vercel
-      globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
+      // FIXED: Proper denylist that won't cause issues
+      navigateFallbackDenylist: [
+        /^\/api\//,      // API routes
+        /^\/admin\//,    // Admin routes  
+        /^\/_nuxt\//,    // Nuxt internal routes
+        /^\/manifest\.webmanifest$/, // Manifest file
+        /\.(?:png|jpg|jpeg|svg|gif|webp|ico|css|js)$/ // Static assets
+      ],
       
-      // Runtime caching for dynamic routes
+      // FIXED: Conservative glob patterns
+      globPatterns: [
+        '**/*.{js,css,html,png,svg,ico}'
+      ],
+      
+      // FIXED: Simplified runtime caching
       runtimeCaching: [
         {
-          // Cache dynamic user card pages
-          urlPattern: /^\/users\/[^/]+$/,
+          // Cache navigation requests (pages)
+          urlPattern: ({ request }) => request.mode === 'navigate',
           handler: 'NetworkFirst',
           options: {
-            cacheName: 'user-cards',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 24 * 60 * 60 // 24 hours
-            },
-            networkTimeoutSeconds: 10
-          }
-        },
-        {
-          // Cache PocketBase API calls
-          urlPattern: /^.*\/api\/collections\/cards\/records.*$/,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'pocketbase-api',
+            cacheName: 'pages',
             expiration: {
               maxEntries: 50,
-              maxAgeSeconds: 5 * 60 // 5 minutes  
+              maxAgeSeconds: 24 * 60 * 60 // 24 hours
             },
-            networkTimeoutSeconds: 5
+            networkTimeoutSeconds: 3
           }
         },
         {
-          // Cache images from PocketBase
-          urlPattern: /^.*\/api\/files\/cards\/.*$/,
+          // Cache API calls to PocketBase
+          urlPattern: ({ url }) => url.pathname.startsWith('/api/collections/'),
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'api-cache',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 5 * 60 // 5 minutes
+            },
+            networkTimeoutSeconds: 3
+          }
+        },
+        {
+          // Cache images
+          urlPattern: ({ request }) => request.destination === 'image',
           handler: 'CacheFirst',
           options: {
-            cacheName: 'card-images',
+            cacheName: 'images',
             expiration: {
               maxEntries: 100,
               maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
@@ -120,6 +130,7 @@ export default defineNuxtConfig({
         }
       ],
       
+      // FIXED: Clean cache management
       cleanupOutdatedCaches: true,
       skipWaiting: true,
       clientsClaim: true
@@ -156,49 +167,52 @@ export default defineNuxtConfig({
     }
   },
 
-  // FIXED: Nitro configuration - Disable problematic prerendering
+  // FIXED: Production-ready Nitro configuration
   nitro: {
     preset: 'vercel',
+    
     prerender: {
-      // FIXED: Disable automatic crawling that causes prerender errors
+      // FIXED: Disable automatic crawling to prevent errors
       crawlLinks: false,
       
-      // FIXED: Only prerender specific static routes
+      // FIXED: Only prerender essential static pages
       routes: [
         '/',
         '/login', 
         '/register',
         '/privacy',
         '/terms',
-        '/contact'
-      ],
-      
-      // FIXED: Ignore dynamic routes that require database data
-      ignore: [
-        '/users/**',  // Ignore all user card routes
-        '/dashboard', // Ignore authenticated routes
-        '/api/**'    // Ignore API routes
+        '/contact',
+        '/offline'  // IMPORTANT: Prerender offline page so it's available when offline
       ]
     },
     
-    // FIXED: Handle dynamic routes as SPA routes instead of prerendering
+    // FIXED: Explicit route rules for clean deployment
     routeRules: {
-      // Static pages - prerender at build time
+      // Static pages - prerender for performance
       '/': { prerender: true },
       '/login': { prerender: true },
       '/register': { prerender: true },
       '/privacy': { prerender: true },
       '/terms': { prerender: true },
       '/contact': { prerender: true },
+      '/offline': { prerender: true }, // IMPORTANT: Offline page must be prerendered
       
-      // Dynamic user cards - SSR on demand (don't prerender)
-      '/users/**': { ssr: true, prerender: false },
+      // Dynamic routes - SSR on demand
+      '/users/**': { 
+        ssr: true, 
+        prerender: false,
+        // Add headers for better caching
+        headers: {
+          'Cache-Control': 'public, max-age=300, s-maxage=300'
+        }
+      },
       
-      // Dashboard - CSR only (requires auth)
-      '/dashboard': { ssr: false, prerender: false },
-      
-      // API routes - always server-side
-      '/api/**': { cors: true, prerender: false }
+      // Dashboard - Client-side only (requires auth)
+      '/dashboard': { 
+        ssr: false, 
+        prerender: false 
+      }
     }
   }
 })

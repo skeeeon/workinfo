@@ -43,15 +43,6 @@
         @close="showQRModal = false"
       />
       
-      <!-- Powered by footer -->
-      <div class="powered-by">
-        <p class="powered-text">
-          Powered by 
-          <NuxtLink to="/" class="powered-link">
-            WorkInfo
-          </NuxtLink>
-        </p>
-      </div>
     </div>
   </div>
 </template>

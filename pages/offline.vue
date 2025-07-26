@@ -2,10 +2,14 @@
   <div class="offline-page">
     <div class="container">
       <div class="offline-content">
+        <!-- Logo -->
+        <div class="logo">
+          <Logo />
+        </div>
+
         <!-- Offline Icon -->
         <div class="offline-icon">
-          <WifiIcon class="w-20 h-20" />
-          <div class="offline-indicator"></div>
+          <WifiSlashIcon class="w-16 h-16" />
         </div>
 
         <!-- Main Message -->
@@ -19,26 +23,22 @@
 
         <!-- Available Actions -->
         <div class="offline-actions">
-          <div class="action-card">
-            <UserIcon class="action-icon" />
-            <h3 class="action-title">View Your Card</h3>
-            <p class="action-description">
-              Your saved business card is still available to view and share
-            </p>
-            <NuxtLink to="/dashboard" class="action-button">
-              Go to Dashboard
-            </NuxtLink>
-          </div>
+          <div class="action-grid">
+            <div class="action-card">
+              <UserIcon class="action-icon" />
+              <h3 class="action-title">Cached Cards</h3>
+              <p class="action-description">
+                Recently viewed business cards are still available
+              </p>
+            </div>
 
-          <div class="action-card">
-            <DocumentDuplicateIcon class="action-icon" />
-            <h3 class="action-title">Recently Viewed</h3>
-            <p class="action-description">
-              Access cards you've recently visited - they're cached locally
-            </p>
-            <button @click="showRecentCards" class="action-button secondary">
-              View Recent
-            </button>
+            <div class="action-card">
+              <DocumentDuplicateIcon class="action-icon" />
+              <h3 class="action-title">Your Dashboard</h3>
+              <p class="action-description">
+                Access your saved card information offline
+              </p>
+            </div>
           </div>
         </div>
 
@@ -57,13 +57,26 @@
           </button>
         </div>
 
+        <!-- Navigation Options -->
+        <div class="navigation-options">
+          <NuxtLink to="/" class="nav-btn primary">
+            <HomeIcon class="w-4 h-4" />
+            Go Home
+          </NuxtLink>
+          
+          <NuxtLink to="/dashboard" class="nav-btn secondary">
+            <UserIcon class="w-4 h-4" />
+            Dashboard
+          </NuxtLink>
+        </div>
+
         <!-- Features Available Offline -->
         <div class="offline-features">
-          <h3 class="features-title">What works offline:</h3>
+          <h3 class="features-title">Available offline:</h3>
           <div class="features-grid">
             <div class="feature-item">
               <CheckCircleIcon class="w-5 h-5 text-green-600" />
-              <span>View your business card</span>
+              <span>View cached business cards</span>
             </div>
             <div class="feature-item">
               <CheckCircleIcon class="w-5 h-5 text-green-600" />
@@ -75,17 +88,9 @@
             </div>
             <div class="feature-item">
               <CheckCircleIcon class="w-5 h-5 text-green-600" />
-              <span>Access cached cards</span>
+              <span>Access your profile</span>
             </div>
           </div>
-        </div>
-
-        <!-- Help Text -->
-        <div class="offline-help">
-          <p class="help-text">
-            <strong>Tip:</strong> When you're back online, any changes you made 
-            will automatically sync across your devices.
-          </p>
         </div>
       </div>
     </div>
@@ -95,30 +100,55 @@
 <script setup>
 /**
  * Offline page for PWA
- * Shown when user is offline and tries to navigate to a non-cached page
+ * Proper Nuxt page that can be prerendered and cached
  */
 
+// Define page meta
+definePageMeta({
+  layout: 'default'
+})
+
+// Import icons
 import {
-  WifiIcon,
+  WifiSlashIcon,
   UserIcon,
   DocumentDuplicateIcon,
   ArrowPathIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  HomeIcon
 } from '@heroicons/vue/24/outline'
 
 // State
-const isOnline = ref(navigator.onLine)
+const isOnline = ref(false)
 const isRetrying = ref(false)
 
+// Initialize online status
+onMounted(() => {
+  if (import.meta.client) {
+    isOnline.value = navigator.onLine
+    
+    // Listen for online/offline events
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+  }
+})
+
+onUnmounted(() => {
+  if (import.meta.client) {
+    window.removeEventListener('online', handleOnline)
+    window.removeEventListener('offline', handleOffline)
+  }
+})
+
 /**
- * Handle online/offline status changes
+ * Handle online status changes
  */
 const handleOnline = () => {
   isOnline.value = true
-  // Auto-redirect to dashboard when back online
+  // Show success message or auto-redirect
   setTimeout(() => {
-    navigateTo('/dashboard')
-  }, 1000)
+    navigateTo('/')
+  }, 1500)
 }
 
 const handleOffline = () => {
@@ -140,7 +170,7 @@ const retryConnection = async () => {
     
     if (response.ok) {
       isOnline.value = true
-      navigateTo('/dashboard')
+      navigateTo('/')
     }
   } catch (error) {
     console.log('Still offline')
@@ -148,26 +178,6 @@ const retryConnection = async () => {
     isRetrying.value = false
   }
 }
-
-/**
- * Show recently cached cards
- */
-const showRecentCards = () => {
-  // This could open a modal or navigate to a cached cards page
-  // For now, just go to dashboard
-  navigateTo('/dashboard')
-}
-
-// Lifecycle
-onMounted(() => {
-  window.addEventListener('online', handleOnline)
-  window.addEventListener('offline', handleOffline)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('online', handleOnline)
-  window.removeEventListener('offline', handleOffline)
-})
 
 // SEO
 useSeoMeta({
@@ -180,7 +190,7 @@ useSeoMeta({
 <style scoped>
 .offline-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, var(--color-surface-primary) 0%, var(--color-surface-secondary) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -188,164 +198,106 @@ useSeoMeta({
 }
 
 .container {
-  max-width: 800px;
+  max-width: 600px;
   width: 100%;
 }
 
 .offline-content {
   text-align: center;
-  background-color: white;
+  background-color: var(--color-surface-primary);
   border-radius: 1rem;
   padding: 3rem 2rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border-primary);
 }
 
-/* Offline Icon */
-.offline-icon {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.logo {
   margin-bottom: 2rem;
-  color: #64748b;
+  display: flex;
+  justify-content: center;
 }
 
-.offline-indicator {
-  position: absolute;
-  bottom: -5px;
-  right: -5px;
-  width: 24px;
-  height: 24px;
-  background-color: #ef4444;
-  border: 3px solid white;
-  border-radius: 50%;
+.offline-icon {
+  color: var(--color-content-secondary);
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
 }
 
-.offline-indicator::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 12px;
-  height: 2px;
-  background-color: white;
-  transform: translate(-50%, -50%) rotate(45deg);
-}
-
-.offline-indicator::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 12px;
-  height: 2px;
-  background-color: white;
-  transform: translate(-50%, -50%) rotate(-45deg);
-}
-
-/* Main Message */
 .offline-message {
   margin-bottom: 3rem;
 }
 
 .offline-title {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: #1e293b;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-content-primary);
   margin-bottom: 1rem;
-  line-height: 1.2;
 }
 
 .offline-description {
   font-size: 1.125rem;
-  color: #64748b;
+  color: var(--color-content-secondary);
   line-height: 1.6;
-  max-width: 500px;
+  max-width: 400px;
   margin: 0 auto;
 }
 
-/* Action Cards */
 .offline-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
   margin-bottom: 3rem;
 }
 
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
 .action-card {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--color-surface-secondary);
+  border: 1px solid var(--color-border-primary);
   border-radius: 0.75rem;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem 1rem;
   text-align: center;
   transition: all 0.2s ease;
 }
 
 .action-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .action-icon {
-  width: 3rem;
-  height: 3rem;
-  color: #3b82f6;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--color-primary);
   margin: 0 auto 1rem;
 }
 
 .action-title {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-content-primary);
   margin-bottom: 0.5rem;
 }
 
 .action-description {
   font-size: 0.875rem;
-  color: #64748b;
-  line-height: 1.5;
-  margin-bottom: 1.5rem;
+  color: var(--color-content-secondary);
+  line-height: 1.4;
 }
 
-.action-button {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.action-button:hover {
-  background-color: #2563eb;
-  transform: translateY(-1px);
-}
-
-.action-button.secondary {
-  background-color: transparent;
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
-}
-
-.action-button.secondary:hover {
-  background-color: #3b82f6;
-  color: white;
-}
-
-/* Connection Status */
 .connection-status {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
   padding: 1rem;
-  background-color: #f8fafc;
+  background-color: var(--color-surface-secondary);
   border-radius: 0.5rem;
+  border: 1px solid var(--color-border-primary);
 }
 
 .status-indicator {
@@ -355,24 +307,25 @@ useSeoMeta({
 }
 
 .status-dot {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background-color: #ef4444;
+  background-color: var(--color-error);
   transition: background-color 0.3s ease;
 }
 
 .status-indicator.online .status-dot {
-  background-color: #22c55e;
+  background-color: var(--color-success);
 }
 
 .status-text {
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-content-secondary);
+  font-size: 0.875rem;
 }
 
 .status-indicator.online .status-text {
-  color: #059669;
+  color: var(--color-success);
 }
 
 .retry-button {
@@ -380,17 +333,18 @@ useSeoMeta({
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background-color: #3b82f6;
+  background-color: var(--color-primary);
   color: white;
   border: none;
   border-radius: 0.375rem;
   font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .retry-button:hover:not(:disabled) {
-  background-color: #2563eb;
+  background-color: var(--color-primary-darker);
 }
 
 .retry-button:disabled {
@@ -398,15 +352,56 @@ useSeoMeta({
   cursor: not-allowed;
 }
 
-/* Offline Features */
-.offline-features {
+.navigation-options {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
   margin-bottom: 2rem;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.nav-btn.primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.nav-btn.primary:hover {
+  background-color: var(--color-primary-darker);
+  transform: translateY(-1px);
+}
+
+.nav-btn.secondary {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.nav-btn.secondary:hover {
+  background-color: var(--color-primary);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.offline-features {
+  border-top: 1px solid var(--color-border-primary);
+  padding-top: 2rem;
 }
 
 .features-title {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-content-primary);
   margin-bottom: 1rem;
 }
 
@@ -414,8 +409,6 @@ useSeoMeta({
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 0.75rem;
-  max-width: 500px;
-  margin: 0 auto;
 }
 
 .feature-item {
@@ -423,45 +416,36 @@ useSeoMeta({
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--color-content-secondary);
   text-align: left;
 }
 
-/* Help Text */
-.offline-help {
-  padding: 1rem;
-  background-color: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 0.5rem;
-}
-
-.help-text {
-  font-size: 0.875rem;
-  color: #1e40af;
-  margin: 0;
-}
-
-/* Mobile Responsive */
 @media (max-width: 768px) {
   .offline-content {
     padding: 2rem 1.5rem;
   }
   
   .offline-title {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
   
   .offline-description {
     font-size: 1rem;
   }
   
-  .action-card {
-    padding: 1.5rem 1rem;
+  .action-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
   
   .connection-status {
     flex-direction: column;
     gap: 0.75rem;
+  }
+  
+  .navigation-options {
+    flex-direction: column;
+    align-items: stretch;
   }
   
   .features-grid {
