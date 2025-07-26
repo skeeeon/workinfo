@@ -46,7 +46,7 @@ export default defineNuxtConfig({
     }
   },
 
-  // PWA Configuration
+  // FIXED PWA Configuration - Handle dynamic routes properly
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
@@ -71,8 +71,73 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
+      // FIXED: Handle navigation fallback properly
       navigateFallback: '/',
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}']
+      navigateFallbackDenylist: [/^\/api\//, /^\/admin\//], // Don't fallback for API routes
+      
+      // FIXED: Glob patterns that work with Vercel
+      globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
+      
+      // FIXED: Runtime caching for dynamic routes
+      runtimeCaching: [
+        {
+          // Cache dynamic user card pages
+          urlPattern: /^\/users\/[^/]+$/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'user-cards',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 24 * 60 * 60 // 24 hours
+            },
+            networkTimeoutSeconds: 10
+          }
+        },
+        {
+          // Cache PocketBase API calls
+          urlPattern: /^.*\/api\/collections\/cards\/records.*$/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'pocketbase-api',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 5 * 60 // 5 minutes  
+            },
+            networkTimeoutSeconds: 5
+          }
+        },
+        {
+          // Cache images from PocketBase
+          urlPattern: /^.*\/api\/files\/cards\/.*$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'card-images',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+            }
+          }
+        },
+        {
+          // Cache other static assets
+          urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'static-images',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+            }
+          }
+        }
+      ],
+      
+      // FIXED: Cleaner cache management
+      cleanupOutdatedCaches: true,
+      
+      // FIXED: Skip waiting for faster updates
+      skipWaiting: true,
+      clientsClaim: true
     }
   },
 
@@ -98,11 +163,27 @@ export default defineNuxtConfig({
     typeCheck: false
   },
 
-  // Vite configuration
+  // FIXED: Vite configuration for better PWA handling
   vite: {
     define: {
       __VUE_OPTIONS_API__: true,
       __VUE_PROD_DEVTOOLS__: false
+    },
+    // Handle PWA build issues
+    build: {
+      rollupOptions: {
+        external: ['workbox-build']
+      }
+    }
+  },
+
+  // FIXED: Nitro configuration for Vercel deployment
+  nitro: {
+    preset: 'vercel',
+    // Handle dynamic routes better in production
+    prerender: {
+      crawlLinks: true,
+      routes: ['/sitemap.xml']
     }
   }
 })

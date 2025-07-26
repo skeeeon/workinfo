@@ -1,5 +1,5 @@
 /**
- * Theme management composable - Clean implementation
+ * Theme management composable - IMPROVED: Prevent recursive calls
  * Handles light/dark mode and custom brand colors
  */
 
@@ -13,6 +13,9 @@ export const useTheme = () => {
     primaryLight: '#2563eb',
     primaryDark: '#60a5fa'
   }))
+  
+  // IMPROVEMENT: Track loading state to prevent recursive calls
+  const isLoadingColors = ref(false)
   
   // Computed properties
   const isDarkMode = computed(() => {
@@ -100,14 +103,32 @@ export const useTheme = () => {
   }
   
   /**
-   * Set custom colors
+   * Set custom colors - IMPROVED: Prevent recursive calls
    * @param {Object} colors - Color configuration
    */
   const setCustomColors = (colors) => {
-    customColors.value = {
+    // IMPROVEMENT: Prevent recursive calls during loading
+    if (isLoadingColors.value) {
+      console.log('Skipping setCustomColors - already loading')
+      return
+    }
+    
+    const newColors = {
       primaryLight: colors.primaryLight || customColors.value.primaryLight,
       primaryDark: colors.primaryDark || customColors.value.primaryDark
     }
+    
+    // IMPROVEMENT: Only update if colors actually changed
+    const hasChanged = newColors.primaryLight !== customColors.value.primaryLight || 
+                      newColors.primaryDark !== customColors.value.primaryDark
+    
+    if (!hasChanged) {
+      console.log('Colors unchanged, skipping update')
+      return
+    }
+    
+    console.log('Updating custom colors:', newColors)
+    customColors.value = newColors
     saveCustomColors()
     applyTheme()
   }
@@ -167,15 +188,35 @@ export const useTheme = () => {
   }
   
   /**
-   * Load colors from card data
+   * Load colors from card data - IMPROVED: Prevent recursive calls
    * @param {Object} cardData - Card data with theme colors
    */
   const loadColorsFromCard = (cardData) => {
-    if (cardData?.theme_primary_light || cardData?.theme_primary_dark) {
+    // IMPROVEMENT: Guard against recursive calls
+    if (isLoadingColors.value) {
+      console.log('Already loading colors, skipping')
+      return
+    }
+    
+    if (!cardData?.theme_primary_light && !cardData?.theme_primary_dark) {
+      console.log('No custom colors in card data')
+      return
+    }
+    
+    isLoadingColors.value = true
+    console.log('Loading colors from card:', {
+      light: cardData.theme_primary_light,
+      dark: cardData.theme_primary_dark
+    })
+    
+    try {
       setCustomColors({
         primaryLight: cardData.theme_primary_light || customColors.value.primaryLight,
         primaryDark: cardData.theme_primary_dark || customColors.value.primaryDark
       })
+    } finally {
+      // Always reset the loading flag
+      isLoadingColors.value = false
     }
   }
   
@@ -192,7 +233,7 @@ export const useTheme = () => {
   
   // Watch for theme changes
   watch(isDarkMode, () => {
-    if (import.meta.client) {
+    if (import.meta.client && !isLoadingColors.value) {
       applyTheme()
     }
   })

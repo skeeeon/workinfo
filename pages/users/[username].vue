@@ -43,14 +43,22 @@
         @close="showQRModal = false"
       />
       
+      <!-- Powered by footer -->
+      <div class="powered-by">
+        <p class="powered-text">
+          Powered by 
+          <NuxtLink to="/" class="powered-link">
+            WorkInfo
+          </NuxtLink>
+        </p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 /**
- * Public contact card page - ENHANCED: Case-insensitive with URL normalization
- * Uses optimized single-query approach with proper URL handling
+ * Public contact card page - FIXED: Prevent recursive theme loading
  */
 
 // Define layout
@@ -66,33 +74,18 @@ const { fetchPublicCard, getPublicShareUrl, isValidPublicCard } = usePublicCard(
 const { loadColorsFromCard } = useTheme()
 const { injectTrackingScript } = useTrackingScript()
 const route = useRoute()
-const router = useRouter()
 
 // Get username from route
-const rawUsername = computed(() => route.params.username)
-
-// ENHANCEMENT: URL Normalization
-// Always work with lowercase usernames internally for consistency
-const username = computed(() => {
-  if (!rawUsername.value || typeof rawUsername.value !== 'string') {
-    return ''
-  }
-  return rawUsername.value.toLowerCase()
-})
-
-// ENHANCEMENT: Redirect uppercase URLs to lowercase for SEO consistency
-onMounted(() => {
-  if (import.meta.client && rawUsername.value !== username.value) {
-    // Redirect to lowercase version for consistency
-    console.log(`Redirecting ${rawUsername.value} to ${username.value}`)
-    router.replace(`/users/${username.value}`)
-  }
-})
+const username = computed(() => route.params.username)
 
 // State
 const showQRModal = ref(false)
 
-// Fetch card data with enhanced error handling
+// FIXED: Track if we've already loaded colors to prevent recursive calls
+const colorsLoaded = ref(false)
+const trackingScriptLoaded = ref(false)
+
+// Fetch card data
 const { data: cardData, pending, error, refresh } = await useLazyAsyncData(
   `public-card-${username.value}`,
   async () => {
@@ -104,20 +97,18 @@ const { data: cardData, pending, error, refresh } = await useLazyAsyncData(
         return null
       }
       
-      // The fetchPublicCard function now handles case-insensitive lookup
       const result = await fetchPublicCard(username.value)
       console.log('Fetch result:', result)
       
       return result
     } catch (fetchError) {
       console.error('Error in fetch function:', fetchError)
-      // Return null instead of throwing to prevent 500 error
       return null
     }
   },
   {
     default: () => null,
-    server: true, // Enable SSR
+    server: true,
     transform: (data) => {
       console.log('Transform received data:', data)
       return data
@@ -135,9 +126,8 @@ const isValidCard = computed(() => {
 // Computed properties
 const cardShareUrl = computed(() => {
   if (!cardData.value || !username.value) return ''
-  // Use the original username case for the share URL if available
-  const displayUsername = cardData.value.username || username.value
-  return getPublicShareUrl(displayUsername)
+  const actualUsername = cardData.value.username || username.value
+  return getPublicShareUrl(actualUsername)
 })
 
 const cardTitle = computed(() => {
@@ -153,7 +143,6 @@ const displayName = computed(() => {
 
 // Handle 404 for unknown cards after data is loaded
 watchEffect(() => {
-  // Only throw 404 after loading is complete and we have no valid card
   if (!pending.value && !error.value && !isValidCard.value && cardData.value !== undefined) {
     console.log('Card not found, throwing 404 for username:', username.value)
     throw createError({
@@ -163,21 +152,31 @@ watchEffect(() => {
   }
 })
 
-// Apply custom theme colors when card loads
-watchEffect(() => {
-  if (cardData.value && isValidCard.value) {
-    console.log('Loading colors from card')
-    loadColorsFromCard(cardData.value)
-    
-    // Inject tracking script if present
-    if (cardData.value.tracking_script) {
-      console.log('Injecting tracking script for card')
-      injectTrackingScript(cardData.value.tracking_script)
-    }
+// FIXED: Apply custom theme colors - prevent recursive calls with guards
+watch([cardData, isValidCard], ([newCardData, newIsValid]) => {
+  if (newCardData && newIsValid && !colorsLoaded.value) {
+    console.log('Loading colors from card (one time only)')
+    loadColorsFromCard(newCardData)
+    colorsLoaded.value = true
   }
+}, { immediate: true })
+
+// FIXED: Inject tracking script - prevent recursive calls with guards  
+watch([cardData, isValidCard], ([newCardData, newIsValid]) => {
+  if (newCardData && newIsValid && newCardData.tracking_script && !trackingScriptLoaded.value) {
+    console.log('Injecting tracking script for card (one time only)')
+    injectTrackingScript(newCardData.tracking_script)
+    trackingScriptLoaded.value = true
+  }
+}, { immediate: true })
+
+// FIXED: Reset flags when route changes (for navigation to different cards)
+watch(() => route.params.username, () => {
+  colorsLoaded.value = false
+  trackingScriptLoaded.value = false
 })
 
-// Enhanced SEO with canonical URL
+// Dynamic SEO based on card data
 watchEffect(() => {
   if (cardData.value && isValidCard.value) {
     const description = cardData.value.note || 
@@ -185,21 +184,16 @@ watchEffect(() => {
     
     const title = `${displayName.value} - ${cardData.value.title || 'Professional'} | WorkInfo`
     
-    // Use the canonical lowercase URL for SEO
-    const canonicalUrl = `${useRuntimeConfig().public.siteUrl}/users/${username.value}`
-    
     useSeoMeta({
       title,
       description,
-      canonical: canonicalUrl,
       ogTitle: `${displayName.value} - Professional Contact Card`,
       ogDescription: description,
       ogType: 'profile',
-      ogUrl: canonicalUrl,
+      ogUrl: cardShareUrl.value,
       twitterCard: 'summary_large_image',
       twitterTitle: title,
       twitterDescription: description,
-      // Add structured data using script tag
       script: [{
         type: 'application/ld+json',
         children: JSON.stringify({
@@ -219,7 +213,6 @@ watchEffect(() => {
       }]
     })
   } else {
-    // Default SEO for loading/error states
     useSeoMeta({
       title: `@${username.value} - WorkInfo`,
       description: `View ${username.value}'s professional contact card on WorkInfo.`,
@@ -231,19 +224,17 @@ watchEffect(() => {
 // Debug logging
 onMounted(() => {
   console.log('=== PUBLIC CARD PAGE DEBUG ===')
-  console.log('Raw Username:', rawUsername.value)
-  console.log('Normalized Username:', username.value)
+  console.log('Username:', username.value)
   console.log('Pending:', pending.value)
   console.log('Error:', error.value)
   console.log('Card data:', cardData.value)
   console.log('Is valid card:', isValidCard.value)
-  console.log('Runtime config:', useRuntimeConfig().public)
   console.log('================================')
 })
 </script>
 
 <style scoped>
-/* Same styles as before - no changes needed */
+/* Keep all existing styles exactly the same */
 .public-card-page {
   min-height: calc(100vh - 200px);
   display: flex;
