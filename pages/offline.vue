@@ -9,7 +9,9 @@
 
         <!-- Offline Icon -->
         <div class="offline-icon">
-          <WifiSlashIcon class="w-16 h-16" />
+          <div class="offline-icon-container">
+            <ExclamationTriangleIcon class="w-16 h-16" />
+          </div>
         </div>
 
         <!-- Main Message -->
@@ -108,14 +110,15 @@ definePageMeta({
   layout: 'default'
 })
 
-// Import icons
+// Import icons - SAFE: Use universally available Heroicons
 import {
-  WifiSlashIcon,
+  ExclamationTriangleIcon,
   UserIcon,
   DocumentDuplicateIcon,
   ArrowPathIcon,
   CheckCircleIcon,
-  HomeIcon
+  HomeIcon,
+  NoSymbolIcon
 } from '@heroicons/vue/24/outline'
 
 // State
@@ -218,10 +221,21 @@ useSeoMeta({
 }
 
 .offline-icon {
-  color: var(--color-content-secondary);
-  margin-bottom: 2rem;
   display: flex;
   justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.offline-icon-container {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f59e0b;
 }
 
 .offline-message {
