@@ -46,7 +46,7 @@ export default defineNuxtConfig({
     }
   },
 
-  // FIXED PWA Configuration - Handle dynamic routes properly
+  // PWA Configuration
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
@@ -71,14 +71,14 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      // FIXED: Handle navigation fallback properly
+      // Handle navigation fallback properly
       navigateFallback: '/',
-      navigateFallbackDenylist: [/^\/api\//, /^\/admin\//], // Don't fallback for API routes
+      navigateFallbackDenylist: [/^\/api\//, /^\/admin\//, /^\/_nuxt\//],
       
-      // FIXED: Glob patterns that work with Vercel
+      // Glob patterns that work with Vercel
       globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
       
-      // FIXED: Runtime caching for dynamic routes
+      // Runtime caching for dynamic routes
       runtimeCaching: [
         {
           // Cache dynamic user card pages
@@ -117,25 +117,10 @@ export default defineNuxtConfig({
               maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
             }
           }
-        },
-        {
-          // Cache other static assets
-          urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'static-images',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
-            }
-          }
         }
       ],
       
-      // FIXED: Cleaner cache management
       cleanupOutdatedCaches: true,
-      
-      // FIXED: Skip waiting for faster updates
       skipWaiting: true,
       clientsClaim: true
     }
@@ -163,27 +148,57 @@ export default defineNuxtConfig({
     typeCheck: false
   },
 
-  // FIXED: Vite configuration for better PWA handling
+  // Vite configuration
   vite: {
     define: {
       __VUE_OPTIONS_API__: true,
       __VUE_PROD_DEVTOOLS__: false
-    },
-    // Handle PWA build issues
-    build: {
-      rollupOptions: {
-        external: ['workbox-build']
-      }
     }
   },
 
-  // FIXED: Nitro configuration for Vercel deployment
+  // FIXED: Nitro configuration - Disable problematic prerendering
   nitro: {
     preset: 'vercel',
-    // Handle dynamic routes better in production
     prerender: {
-      crawlLinks: true,
-      routes: ['/sitemap.xml']
+      // FIXED: Disable automatic crawling that causes prerender errors
+      crawlLinks: false,
+      
+      // FIXED: Only prerender specific static routes
+      routes: [
+        '/',
+        '/login', 
+        '/register',
+        '/privacy',
+        '/terms',
+        '/contact'
+      ],
+      
+      // FIXED: Ignore dynamic routes that require database data
+      ignore: [
+        '/users/**',  // Ignore all user card routes
+        '/dashboard', // Ignore authenticated routes
+        '/api/**'    // Ignore API routes
+      ]
+    },
+    
+    // FIXED: Handle dynamic routes as SPA routes instead of prerendering
+    routeRules: {
+      // Static pages - prerender at build time
+      '/': { prerender: true },
+      '/login': { prerender: true },
+      '/register': { prerender: true },
+      '/privacy': { prerender: true },
+      '/terms': { prerender: true },
+      '/contact': { prerender: true },
+      
+      // Dynamic user cards - SSR on demand (don't prerender)
+      '/users/**': { ssr: true, prerender: false },
+      
+      // Dashboard - CSR only (requires auth)
+      '/dashboard': { ssr: false, prerender: false },
+      
+      // API routes - always server-side
+      '/api/**': { cors: true, prerender: false }
     }
   }
 })
