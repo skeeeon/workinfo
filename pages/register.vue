@@ -17,16 +17,20 @@
           placeholder="Choose a unique username"
           required
           :disabled="isLoading"
-          @input="validateUsernameFormat"
+          @input="handleUsernameInput"
         />
         <div v-if="usernameError" class="form-error">
           {{ usernameError }}
         </div>
-        <div v-else-if="usernameValid && formData.username" class="text-green-600 text-sm mt-1">
+        <div v-else-if="usernameValid && normalizedUsername" class="text-green-600 text-sm mt-1">
           ✓ Username format is valid
         </div>
+        <!-- ENHANCEMENT: Show normalized username preview -->
         <p class="form-helper">
-          Your username will be used in your card URL: workinfo.me/users/{{ formData.username || 'username' }}
+          Your card URL will be: workinfo.me/users/<span class="font-mono text-primary-600">{{ normalizedUsername || 'username' }}</span>
+          <span v-if="normalizedUsername && normalizedUsername !== formData.username" class="text-amber-600 text-xs block mt-1">
+            Note: Username will be saved as "{{ normalizedUsername }}" (lowercase)
+          </span>
         </p>
       </div>
 
@@ -109,9 +113,8 @@
 
 <script setup>
 /**
- * Registration page for WorkInfo
+ * Registration page for WorkInfo - ENHANCED: Username normalization preview
  * Handles user registration with client-side format validation
- * Username availability is checked server-side during registration
  */
 
 // Define layout
@@ -121,7 +124,7 @@ definePageMeta({
 })
 
 // Use auth composable
-const { registerUser, isLoading, error, clearError, isValidUsername, isValidEmail } = useAuth()
+const { registerUser, isLoading, error, clearError, isValidUsername, isValidEmail, normalizeUsername } = useAuth()
 
 // Form data
 const formData = ref({
@@ -134,6 +137,11 @@ const formData = ref({
 // Username validation state
 const usernameError = ref('')
 const usernameValid = ref(false)
+
+// ENHANCEMENT: Show normalized username preview
+const normalizedUsername = computed(() => {
+  return normalizeUsername(formData.value.username)
+})
 
 // Computed properties
 const passwordMismatch = computed(() => {
@@ -150,6 +158,11 @@ const isFormValid = computed(() => {
          usernameValid.value
 })
 
+// ENHANCEMENT: Handle username input with normalization preview
+const handleUsernameInput = () => {
+  validateUsernameFormat()
+}
+
 // Username format validation
 const validateUsernameFormat = () => {
   usernameError.value = ''
@@ -157,8 +170,11 @@ const validateUsernameFormat = () => {
   
   if (!formData.value.username) return
   
-  // Validate username format
-  if (!isValidUsername(formData.value.username)) {
+  // Get normalized version for validation
+  const normalized = normalizedUsername.value
+  
+  // Validate normalized username format
+  if (!isValidUsername(normalized)) {
     usernameError.value = 'Username must be 3-20 characters, letters, numbers, and underscores only'
     return
   }
@@ -241,5 +257,14 @@ useSeoMeta({
 
 .btn:disabled:hover {
   transform: none;
+}
+
+/* ENHANCEMENT: Style for normalized username preview */
+.font-mono {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.text-primary-600 {
+  color: var(--color-primary);
 }
 </style>

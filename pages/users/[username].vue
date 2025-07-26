@@ -43,23 +43,14 @@
         @close="showQRModal = false"
       />
       
-      <!-- Powered by footer -->
-      <div class="powered-by">
-        <p class="powered-text">
-          Powered by 
-          <NuxtLink to="/" class="powered-link">
-            WorkInfo
-          </NuxtLink>
-        </p>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 /**
- * Public contact card page - Fixed with better error handling
- * Uses optimized single-query approach for better performance
+ * Public contact card page - ENHANCED: Case-insensitive with URL normalization
+ * Uses optimized single-query approach with proper URL handling
  */
 
 // Define layout
@@ -75,14 +66,33 @@ const { fetchPublicCard, getPublicShareUrl, isValidPublicCard } = usePublicCard(
 const { loadColorsFromCard } = useTheme()
 const { injectTrackingScript } = useTrackingScript()
 const route = useRoute()
+const router = useRouter()
 
 // Get username from route
-const username = computed(() => route.params.username)
+const rawUsername = computed(() => route.params.username)
+
+// ENHANCEMENT: URL Normalization
+// Always work with lowercase usernames internally for consistency
+const username = computed(() => {
+  if (!rawUsername.value || typeof rawUsername.value !== 'string') {
+    return ''
+  }
+  return rawUsername.value.toLowerCase()
+})
+
+// ENHANCEMENT: Redirect uppercase URLs to lowercase for SEO consistency
+onMounted(() => {
+  if (import.meta.client && rawUsername.value !== username.value) {
+    // Redirect to lowercase version for consistency
+    console.log(`Redirecting ${rawUsername.value} to ${username.value}`)
+    router.replace(`/users/${username.value}`)
+  }
+})
 
 // State
 const showQRModal = ref(false)
 
-// Fetch card data with better error handling
+// Fetch card data with enhanced error handling
 const { data: cardData, pending, error, refresh } = await useLazyAsyncData(
   `public-card-${username.value}`,
   async () => {
@@ -94,6 +104,7 @@ const { data: cardData, pending, error, refresh } = await useLazyAsyncData(
         return null
       }
       
+      // The fetchPublicCard function now handles case-insensitive lookup
       const result = await fetchPublicCard(username.value)
       console.log('Fetch result:', result)
       
@@ -124,7 +135,9 @@ const isValidCard = computed(() => {
 // Computed properties
 const cardShareUrl = computed(() => {
   if (!cardData.value || !username.value) return ''
-  return getPublicShareUrl(username.value)
+  // Use the original username case for the share URL if available
+  const displayUsername = cardData.value.username || username.value
+  return getPublicShareUrl(displayUsername)
 })
 
 const cardTitle = computed(() => {
@@ -164,7 +177,7 @@ watchEffect(() => {
   }
 })
 
-// Dynamic SEO based on card data
+// Enhanced SEO with canonical URL
 watchEffect(() => {
   if (cardData.value && isValidCard.value) {
     const description = cardData.value.note || 
@@ -172,17 +185,21 @@ watchEffect(() => {
     
     const title = `${displayName.value} - ${cardData.value.title || 'Professional'} | WorkInfo`
     
+    // Use the canonical lowercase URL for SEO
+    const canonicalUrl = `${useRuntimeConfig().public.siteUrl}/users/${username.value}`
+    
     useSeoMeta({
       title,
       description,
+      canonical: canonicalUrl,
       ogTitle: `${displayName.value} - Professional Contact Card`,
       ogDescription: description,
       ogType: 'profile',
-      ogUrl: cardShareUrl.value,
+      ogUrl: canonicalUrl,
       twitterCard: 'summary_large_image',
       twitterTitle: title,
       twitterDescription: description,
-      // Add structured data using script tag instead
+      // Add structured data using script tag
       script: [{
         type: 'application/ld+json',
         children: JSON.stringify({
@@ -214,38 +231,19 @@ watchEffect(() => {
 // Debug logging
 onMounted(() => {
   console.log('=== PUBLIC CARD PAGE DEBUG ===')
-  console.log('Username:', username.value)
+  console.log('Raw Username:', rawUsername.value)
+  console.log('Normalized Username:', username.value)
   console.log('Pending:', pending.value)
   console.log('Error:', error.value)
   console.log('Card data:', cardData.value)
   console.log('Is valid card:', isValidCard.value)
   console.log('Runtime config:', useRuntimeConfig().public)
   console.log('================================')
-  
-  // Test direct API call
-  if (import.meta.client) {
-    testDirectFetch()
-  }
 })
-
-// Test function to verify API access
-const testDirectFetch = async () => {
-  try {
-    const config = useRuntimeConfig()
-    const testUrl = `${config.public.pocketbaseUrl}/api/collections/cards/records?filter=username='${username.value}'%26%26is_active=true`
-    console.log('Testing direct fetch to:', testUrl)
-    
-    const response = await fetch(testUrl)
-    const data = await response.json()
-    console.log('Direct fetch result:', { status: response.status, data })
-  } catch (err) {
-    console.error('Direct fetch failed:', err)
-  }
-}
 </script>
 
 <style scoped>
-/* Main container */
+/* Same styles as before - no changes needed */
 .public-card-page {
   min-height: calc(100vh - 200px);
   display: flex;
@@ -255,7 +253,6 @@ const testDirectFetch = async () => {
   padding: 2rem 1rem;
 }
 
-/* Loading state */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -282,7 +279,6 @@ const testDirectFetch = async () => {
   color: var(--color-content-secondary);
 }
 
-/* Error state */
 .error-state {
   display: flex;
   flex-direction: column;
@@ -323,7 +319,6 @@ const testDirectFetch = async () => {
   justify-content: center;
 }
 
-/* Card content */
 .card-content {
   width: 100%;
   max-width: 800px;
@@ -348,7 +343,6 @@ const testDirectFetch = async () => {
   }
 }
 
-/* Powered by footer */
 .powered-by {
   margin-top: 2rem;
   padding-top: 2rem;
@@ -373,7 +367,6 @@ const testDirectFetch = async () => {
   text-decoration: underline;
 }
 
-/* Button styling */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -409,7 +402,6 @@ const testDirectFetch = async () => {
   transform: translateY(-1px);
 }
 
-/* Responsive design */
 @media (max-width: 768px) {
   .public-card-page {
     padding: 1rem;

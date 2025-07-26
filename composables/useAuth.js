@@ -1,5 +1,5 @@
 /**
- * Authentication composable - Clean implementation
+ * Authentication composable - Enhanced with username normalization
  * Handles user authentication with proper validation
  */
 
@@ -45,7 +45,7 @@ export const useAuth = () => {
   }
   
   /**
-   * Register new user with validation
+   * Register new user with validation and username normalization
    * @param {Object} userData - Registration data
    * @returns {Promise<boolean>} Success status
    */
@@ -69,7 +69,10 @@ export const useAuth = () => {
         throw new Error('Password must be at least 8 characters')
       }
       
-      if (!isValidUsername(username)) {
+      // ENHANCEMENT: Normalize username to lowercase for consistency
+      const normalizedUsername = username.toLowerCase().trim()
+      
+      if (!isValidUsername(normalizedUsername)) {
         throw new Error('Username must be 3-20 characters, alphanumeric and underscores only')
       }
       
@@ -77,8 +80,14 @@ export const useAuth = () => {
         throw new Error('Invalid email format')
       }
       
+      // Create userData with normalized username
+      const normalizedUserData = {
+        ...userData,
+        username: normalizedUsername
+      }
+      
       // Perform registration
-      await register(userData)
+      await register(normalizedUserData)
       
       // Navigate to dashboard on success
       await navigateTo('/dashboard')
@@ -125,13 +134,24 @@ export const useAuth = () => {
   }
   
   /**
-   * Validate username format
-   * @param {string} username - Username to validate
+   * Validate username format - ENHANCED: Now validates lowercase
+   * @param {string} username - Username to validate (should be lowercase)
    * @returns {boolean} Is valid username
    */
   const isValidUsername = (username) => {
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/
+    // Only allow lowercase letters, numbers, and underscores
+    const usernameRegex = /^[a-z0-9_]{3,20}$/
     return usernameRegex.test(username)
+  }
+  
+  /**
+   * Normalize username input - NEW: Helper function for consistent formatting
+   * @param {string} username - Raw username input
+   * @returns {string} Normalized username
+   */
+  const normalizeUsername = (username) => {
+    if (!username) return ''
+    return username.toLowerCase().trim()
   }
   
   return {
@@ -149,6 +169,7 @@ export const useAuth = () => {
     
     // Validation
     isValidEmail,
-    isValidUsername
+    isValidUsername,
+    normalizeUsername
   }
 }

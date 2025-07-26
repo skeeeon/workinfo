@@ -1,11 +1,11 @@
 /**
- * Public card composable - Corrected to use direct username field
- * The username is stored directly in the cards collection, not in users
+ * Public card composable - SIMPLE: Just normalize to lowercase
+ * Assumes usernames are stored in lowercase (from registration fix)
  */
 
 export const usePublicCard = () => {
   /**
-   * Fetch public card by username - Uses direct username field in cards collection
+   * Fetch public card by username - SIMPLE: Normalize incoming username
    * @param {string} username - Username to lookup
    * @returns {Promise<Object|null>} Card data
    */
@@ -14,13 +14,15 @@ export const usePublicCard = () => {
       const config = useRuntimeConfig()
       const baseUrl = config.public.pocketbaseUrl
       
-      console.log('Fetching public card for username:', username)
+      // SIMPLE FIX: Just normalize to lowercase before query
+      const normalizedUsername = username.toLowerCase()
       
-      // Query cards collection using direct username field
+      console.log('Fetching public card for username:', username, '-> normalized:', normalizedUsername)
+      
       const cardResponse = await $fetch(`${baseUrl}/api/collections/cards/records`, {
         query: {
-          filter: `username='${username}' && is_active=true`,
-          expand: 'user_id', // Still expand user_id for additional user data if needed
+          filter: `username='${normalizedUsername}' && is_active=true`,
+          expand: 'user_id',
           perPage: 1
         }
       })
@@ -28,7 +30,7 @@ export const usePublicCard = () => {
       console.log('Card API response:', cardResponse)
       
       if (!cardResponse.items || cardResponse.items.length === 0) {
-        console.log('No active card found for username:', username)
+        console.log('No active card found for username:', normalizedUsername)
         return null
       }
       
