@@ -228,6 +228,176 @@ body {
   font-size: 0.875rem;
 }
 
+/* Legal Pages Styling */
+.legal-page {
+  min-height: calc(100vh - 200px);
+  padding: 3rem 0;
+  background-color: var(--color-surface-primary);
+}
+
+.legal-page .container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.legal-page .content {
+  background-color: var(--color-surface-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 1rem;
+  padding: 3rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.legal-page .page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-content-primary);
+  margin-bottom: 2rem;
+  text-align: center;
+  border-bottom: 2px solid var(--color-primary);
+  padding-bottom: 1rem;
+}
+
+.legal-page .prose {
+  line-height: 1.8;
+  color: var(--color-content-primary);
+}
+
+.legal-page .prose p {
+  margin-bottom: 1.5rem;
+  color: var(--color-content-secondary);
+  font-size: 1rem;
+}
+
+.legal-page .prose h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-content-primary);
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid var(--color-primary);
+  padding-left: 1rem;
+}
+
+.legal-page .prose h3 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-content-primary);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Contact Page Styling */
+.contact-page {
+  min-height: calc(100vh - 200px);
+  padding: 3rem 0;
+  background-color: var(--color-surface-primary);
+}
+
+.contact-page .container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.contact-page .content {
+  background-color: var(--color-surface-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 1rem;
+  padding: 3rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.contact-page .page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-content-primary);
+  margin-bottom: 2rem;
+  text-align: center;
+  border-bottom: 2px solid var(--color-primary);
+  padding-bottom: 1rem;
+}
+
+.contact-card {
+  background-color: var(--color-surface-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.contact-card h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-content-primary);
+  margin-bottom: 1rem;
+}
+
+.contact-card p {
+  color: var(--color-content-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.contact-methods {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.contact-method {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--color-surface-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.contact-method:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.contact-icon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--color-primary);
+  background-color: var(--color-surface-secondary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.contact-method h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-content-primary);
+  margin-bottom: 0.25rem;
+}
+
+.contact-method p {
+  color: var(--color-content-secondary);
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.contact-method a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.contact-method a:hover {
+  color: var(--color-primary-darker);
+  text-decoration: underline;
+}
+
 /* Utility classes */
 .container {
   max-width: 1280px;
@@ -292,6 +462,35 @@ body {
   
   .card {
     padding: 1rem;
+  }
+  
+  /* Legal pages mobile */
+  .legal-page .content {
+    padding: 2rem 1.5rem;
+  }
+  
+  .legal-page .page-title {
+    font-size: 2rem;
+  }
+  
+  /* Contact page mobile */
+  .contact-page .content {
+    padding: 2rem 1.5rem;
+  }
+  
+  .contact-page .page-title {
+    font-size: 2rem;
+  }
+  
+  .contact-method {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  
+  .contact-icon {
+    width: 2.5rem;
+    height: 2.5rem;
   }
 }
 
